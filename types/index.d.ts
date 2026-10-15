@@ -89,6 +89,8 @@ declare module 'claude-code' {
       view: BandView | null
       settings: PetSettings
       pane: { confirmHatch: boolean }
+      /** Bumped to redraw the terminal band while it moves. */
+      frame: number
     }
   }
 }

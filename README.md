@@ -19,6 +19,8 @@ In a Claude Code session:
 
 It draws in the **Claude Code CLI**, the **Code tab of the Claude Desktop app** and, where supported, the **VS Code extension**. Elsewhere its hooks still run and `/pet-stats` prints a text card.
 
+In a terminal the band is three rows of pixel art made of half blocks, two pixels to a cell: the pet, the weather and the grass, with the caption in a zone of its own on the right. Every row is exactly as wide as the terminal, so nothing wraps; a narrow terminal drops the caption, then the weather, and below 18 columns shows one line of text.
+
 ## What it does
 
 - **Grows** through six stages, Egg → Baby → Kid → Teen → Adult → Legend, from the turns and tools it watches.
@@ -92,7 +94,7 @@ See also [PRIVACY.md](PRIVACY.md).
 
 ## How it stays light
 
-The band is one SVG picture whose source only changes when something you can see changes, so the surface keeps it running instead of reloading it; loops are phased to the moment the picture was first drawn. The scene has only a handful of animations, rain and snow move as single sheets, and a session nobody is looking at goes dormant.
+The band is one SVG picture whose source only changes when something you can see changes, so the surface keeps it running instead of reloading it; loops are phased to the moment the picture was first drawn. The scene has only a handful of animations, rain and snow move as single sheets, and a session nobody is looking at goes dormant. In a terminal the band redraws once a second, four times a second while the pet walks, and stops as soon as no terminal is drawing it.
 
 ## Develop
 

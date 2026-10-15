@@ -1,9 +1,9 @@
 import type { BandScene, Mood, Path, Play, Trait, Weather, WeatherKind } from '../types'
 
-const BODY = ['#f3e6c8', '#9fd8ff', '#8be0a4', '#ffd27a', '#ff9f80', '#c7a0ff']
+export const BODY = ['#f3e6c8', '#9fd8ff', '#8be0a4', '#ffd27a', '#ff9f80', '#c7a0ff']
 const SCALE = [1, 0.72, 0.82, 0.92, 1, 1.06]
 /** The pet's own colour: the stage colour turned around the hue wheel by `deg`. */
-const tint = (hex: string, deg: number) => {
+export const tint = (hex: string, deg: number) => {
   if (deg === 0) return hex
   const n = parseInt(hex.slice(1), 16)
   const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => v / 255) as [number, number, number]

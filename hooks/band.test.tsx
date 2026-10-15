@@ -171,3 +171,14 @@ test('/pet-stats opens the pane, or prints the card where no pane can be placed'
   placed = false
   expect((await run($ as never, 'pet-stats')).text?.includes('food')).toBe(true)
 })
+
+test('a terminal gets the pixel band as rows of text, no Svg', async ($, on) => {
+  mock.clock(on, { now: 1_000_000 })
+  engine(on as never)
+  mock.store(on)
+  await $.session.start({ ...START, surface: 'terminal' } as never)
+  const ui = await $.ui.mount({ plugin: 'claudy-pet', surface: 'terminal', component: 'AbovePrompt', props: { ...BAND, bodyColumns: 80 } })
+  expect(await ui.find({ type: 'Svg' })).toBeUndefined()
+  expect(await ui.find({ type: 'Box' })).toBeDefined()
+  await ui.unmount()
+})

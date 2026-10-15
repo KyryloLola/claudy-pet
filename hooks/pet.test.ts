@@ -1,6 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Live, Pet, Stroll, Weather } from '../types'
+import { ASCII_MIN, ASCII_ROWS, asciiBand, asciiPortrait, toHex } from './ascii'
 import { layoutOf } from './layout'
 import { openSession } from './lifecycle'
 import { DEFAULT_SETTINGS, parseSwitch, statsText } from './stats'
@@ -180,4 +181,45 @@ test('settings shape the view: no caption, no weather, no plays', async () => {
   expect(off.scene.caption).toEqual([])
   expect(off.scene.weather).toBe(null)
   expect(off.scene.look.play).toBe(null)
+})
+
+test('the terminal band is four rows, each exactly as wide as asked, at any width and in any weather', async () => {
+  const kinds = ['clear', 'partly', 'cloudy', 'fog', 'drizzle', 'rain', 'snow', 'storm'] as const
+  for (const kind of kinds) {
+    for (const isDay of [true, false]) {
+      for (const xp of [0, 70, 1200]) {
+        const scene = sceneOf(calm({ xp, name: 'Байт 🐣' }), newLive(0), { ...newStroll(0), from: 0, to: 1, startedAt: 0, durMs: 9000, isActive: true }, { ...rainy, kind, isDay, city: 'Київ' }, 0)
+        for (let width = ASCII_MIN; width <= 300; width += 7) {
+          for (const now of [0, 4500, 9000]) {
+            const rows = asciiBand(scene, width, now)!
+            expect(rows.length).toBe(ASCII_ROWS)
+            for (const runs of rows) expect([...runs.map(r => r.text).join('')].length).toBe(width)
+          }
+        }
+      }
+    }
+  }
+  expect(asciiBand(sceneAt(calm({ xp: 70 }), newLive(0), newStroll(0), 0), ASCII_MIN - 1, 0)).toBe(null)
+})
+
+test('terminal colours are plain hex', async () => {
+  expect(toHex('#ff9f80')).toBe('#ff9f80')
+  expect(toHex('hsl(0 100% 50%)')).toBe('#ff0000')
+  expect(toHex('hsl(120 100% 25%)')).toBe('#008000')
+})
+
+test('in a terminal the caption keeps its own zone: no pet pixel, rain or star ever lands in it', async () => {
+  for (const kind of ['rain', 'snow', 'clear'] as const) {
+    for (const width of [40, 60, 80, 120, 200]) {
+      for (const to of [0, 1]) {
+        const scene = sceneOf(calm({ xp: 70 }), newLive(0), { ...newStroll(0), from: to, to, startedAt: 0, durMs: 0 }, { ...rainy, kind, isDay: false }, 0)
+        const caption = scene.caption.join(' · ')
+        const rows = asciiBand(scene, width, 0)!.map(runs => runs.map(r => r.text).join(''))
+        const at = rows[1]!.lastIndexOf(caption)
+        const tail = rows[1]!.slice(at - 2)
+        if (at >= 0) expect(tail).toBe(`  ${caption} `)
+      }
+    }
+  }
+  expect(asciiPortrait(sceneOf(calm({ xp: 70 }), newLive(0), newStroll(0), null, 0), 0).length).toBe(ASCII_ROWS)
 })

@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { AlbumEntry, BandView, Live, Mood, Pet, PetSettings, Stroll, Weather } from '../types'
 import { openSession } from './lifecycle'
 import { DEFAULT_SETTINGS, albumLine, parseSwitch, statsText } from './stats'
+import { ASCII_MIN, asciiBand, asciiPortrait, isStriding } from './ascii'
 import { layoutOf } from './layout'
 import {
   FACE,
@@ -47,6 +48,7 @@ const weather = atom({ plugin: 'claudy-pet', key: 'weather' } as const, null as 
 const view = atom({ plugin: 'claudy-pet', key: 'view' } as const, null as BandView | null)
 const settings = atom({ plugin: 'claudy-pet', key: 'settings' } as const, DEFAULT_SETTINGS as PetSettings)
 const pane = atom({ plugin: 'claudy-pet', key: 'pane' } as const, { confirmHatch: false })
+const frame = atom({ plugin: 'claudy-pet', key: 'frame' } as const, 0)
 
 const PANE = 'claudy-pet'
 
@@ -61,6 +63,9 @@ const TYPING_QUIET_MS = 4000
 const WEATHER_MS = 20 * 60_000
 const PLACE_MS = 12 * 3600_000
 const GOLDEN_TURNS = 15
+/** The terminal band redraws itself this often: quicker while the pet walks. */
+const FRAME_MS = 1000
+const WALK_FRAME_MS = 250
 
 type Place = { lat: number; lon: number; city: string; at: number }
 
@@ -79,6 +84,9 @@ let wake: { at: number; timer: { cancel: () => void } } | null = null
 let anchor = { key: '', at: 0 }
 /** The width last drawn, per surface: kept while it still fits, see layoutOf. */
 const lastWidth: Record<string, number> = {}
+/** When a terminal last drew the band, and whether its frame loop is running. */
+let lastTextAt = 0
+let isAnimating = false
 
 const setPet = async ($: EngineInterface, fn: (p: Pet) => Pet) => {
   const now = await $.clock.now()
@@ -310,6 +318,19 @@ const checkPath = async ($: EngineInterface) => {
   await flash($, 'party', 5000)
 }
 
+/** Redraws the terminal band while one is drawing it; stops once none has for a few seconds. */
+const animate = async ($: EngineInterface) => {
+  const now = await $.clock.now()
+  if (isDormant || now - lastTextAt > 3 * FRAME_MS) {
+    isAnimating = false
+    return
+  }
+  await update($, frame, n => n + 1)
+  const v = await read($, view)
+  const ms = v !== null && isStriding(v.scene.stride, now) ? WALK_FRAME_MS : FRAME_MS
+  $.clock.after(ms, () => void animate($))
+}
+
 /** The same picture keeps the same anchor; a changed picture, or the band shown again, gets a new one. */
 const anchorFor = (key: string, now: number) => {
   if (anchor.key !== key) anchor = { key, at: now }
@@ -473,7 +494,32 @@ export const register: Register = on => {
 
     const layout = layoutOf(e.surface, e.props.bodyColumns, hasSvg, lastWidth[e.surface])
     if (layout.kind === 'scene') lastWidth[e.surface] = layout.width
-    if (layout.kind === 'text' || !hasSvg) return <Text>{`${FACE[v.scene.mood]} ${v.scene.caption.join(' · ')}`}</Text>
+    if (layout.kind === 'text' || !hasSvg) {
+      const line = <Text wrap="truncate">{`${FACE[v.scene.mood]} ${v.scene.caption.join(' · ')}`}</Text>
+      if (e.surface !== 'terminal' || e.props.bodyColumns - 2 < ASCII_MIN) return line
+      await read($, frame)
+      lastTextAt = lastDrawnAt
+      if (!isAnimating) {
+        isAnimating = true
+        $.clock.after(FRAME_MS, () => void animate($))
+      }
+      const rows = asciiBand(v.scene, e.props.bodyColumns - 2, lastDrawnAt)
+      if (rows === null) return line
+      const { Box } = els
+      return (
+        <Box flexDirection="column">
+          {rows.map((runs, r) => (
+            <Text key={`row-${r}`} wrap="truncate">
+              {runs.map((run, k) => (
+                <Text key={`run-${k}`} color={run.color} backgroundColor={run.bg}>
+                  {run.text}
+                </Text>
+              ))}
+            </Text>
+          ))}
+        </Box>
+      )
+    }
 
     const now = lastDrawnAt
     const scene = layout.hasCaption ? v.scene : { ...v.scene, caption: [] }
@@ -515,7 +561,17 @@ export const register: Register = on => {
           {'Svg' in els ? (
             <els.Svg source={portraitSvg(scene)} alt={`${p.name}, ${scene.mood}`} width={200} height={167} isInteractive />
           ) : (
-            <Text>{FACE[scene.mood]}</Text>
+            <Box flexDirection="column">
+              {asciiPortrait(scene, now).map((runs, r) => (
+                <Text key={`portrait-${r}`} wrap="truncate">
+                  {runs.map((run, k) => (
+                    <Text key={`run-${k}`} color={run.color} backgroundColor={run.bg}>
+                      {run.text}
+                    </Text>
+                  ))}
+                </Text>
+              ))}
+            </Box>
           )}
           <Box flexDirection="column">
             <Text bold>{title}</Text>
