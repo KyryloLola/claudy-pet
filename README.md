@@ -50,16 +50,33 @@ Settings and the pet itself are kept across sessions.
 
 Pick one in the `/pet-stats` pane. "natural" keeps the colours of each stage.
 
-## Network and privacy
+## What it reads, sends and runs
 
-With weather on (the default), the mod makes two kinds of requests:
+Claudy Pet is written to be easy to audit. Everything it does outside its own code is listed here.
 
-- [ipwho.is](https://ipwho.is) to find your rough location from your IP address, at most twice a day, cached;
-- [open-meteo.com](https://open-meteo.com) for the current weather at that place, rounded to about a kilometre, every 20 minutes.
+**What it reads**
 
-Nothing else leaves your machine. `/pet-weather off` stops both; the scene then shows a calm sky for the time of day.
+- **Your prompt box**, only to tell whether you are typing (so the band can step aside). It looks at whether the text is empty; the text is never stored or sent.
+- **Each submitted prompt and each tool call**, only to count them: a prompt feeds the pet, and a tool call adds to its tally of shell, edit and explore work. It reads the tool's name and whether it failed; never its input or output.
+- **Each finished turn**: whether it ended normally and its output token count, which turn into experience.
+- **Its own settings and pet**, in the plugin's own store under your Claude Code configuration directory.
 
-Like every mod, Claudy Pet runs with your permissions. Before installing it you can list exactly what it does with `claude plugin validate <path-to-a-clone>`.
+**What it sends, and where**
+
+Only when the weather setting is on (it is by default):
+
+- `GET https://ipwho.is/` — returns the city and rough coordinates for your IP address. Like any web request, it reveals your IP address to ipwho.is. The answer is cached and the call made at most twice a day.
+- `GET https://api.open-meteo.com/v1/forecast?latitude=…&longitude=…&current=…` — the current weather at those coordinates, rounded to two decimals (about a kilometre). Every 20 minutes.
+
+Nothing about your prompts, tool calls, files, code or conversation is ever sent anywhere. `/pet-weather off` stops both requests.
+
+**What it runs**
+
+Nothing. It starts no processes, runs no shell commands, calls no tools and no models. Its `tool.call` hook only observes calls to count them, and always lets them run unchanged. It adds the `/pet-*` commands listed above, each of which only changes the pet or its settings.
+
+Like every mod, Claudy Pet runs with your permissions; you can confirm all of the above with `claude plugin validate <path-to-a-clone>`, which lists every hook and call the mod makes.
+
+See also [PRIVACY.md](PRIVACY.md).
 
 ## How it stays light
 
