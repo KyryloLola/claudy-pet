@@ -106,7 +106,7 @@ test('every stage, mood, weather and play draws clean svg', async () => {
   for (let stage = 0; stage < 6; stage++) {
     for (const mood of ['idle', 'thinking', 'sleeping', 'sad', 'hungry', 'eating', 'happy', 'party', 'loved'] as const) {
       const w: Weather = { ...rainy, kind: kinds[(stage * 3 + mood.length) % kinds.length]!, isDay: stage % 2 === 0 }
-      const svg = bandSvg({ ...sceneOf(calm({ xp: [0, 20, 70, 200, 500, 1200][stage]! }), newLive(0), newStroll(0), w, 0), mood, look: { hue: 120, trait: 'curious', path: stage >= 3 ? 'writer' : null, play: 'sing' } }, 600, 777)
+      const svg = bandSvg({ ...sceneOf(calm({ xp: [0, 20, 70, 200, 500, 1200][stage]! }), newLive(0), newStroll(0), w, 0), mood, look: { hue: 120, trait: 'curious', path: stage >= 3 ? 'writer' : null, play: 'sing', skin: stage === 2 ? '#ff9fc2' : null } }, 600, 777)
       expect(svg.includes('undefined') || svg.includes('NaN')).toBe(false)
     }
   }

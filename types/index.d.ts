@@ -36,6 +36,8 @@ export type Pet = {
   hue: number
   path: Path | null
   tally: Tally
+  /** A chosen body colour (a skin), or null for the stage colours turned by `hue`. */
+  skin?: string | null
 }
 
 export type AlbumEntry = { name: string; trait: Trait; hue: number; stage: string; path: Path | null; turns: number; born: number; retired: number }
@@ -65,7 +67,7 @@ export type BandScene = {
   mood: Mood
   golden: boolean
   eggXp: number
-  look: { hue: number; trait: Trait; path: Path | null; play: Play | null }
+  look: { hue: number; trait: Trait; path: Path | null; play: Play | null; skin: string | null }
   weather: Weather | null
   caption: string[]
   stride: { from: number; to: number; startedAt: number; durMs: number; facing: 1 | -1 }
@@ -86,6 +88,7 @@ declare module 'claude-code' {
       weather: Weather | null
       view: BandView | null
       settings: PetSettings
+      pane: { confirmHatch: boolean }
     }
   }
 }

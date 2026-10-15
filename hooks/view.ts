@@ -18,7 +18,7 @@ export const sceneOf = (p: Pet, l: Live, st: Stroll, w: Weather | null, now: num
     mood,
     golden: p.golden,
     eggXp: stage === 0 ? (p.xp >= 12 ? 12 : p.xp >= 8 ? 8 : 0) : 0,
-    look: { hue: p.hue, trait: p.trait, path: p.path, play },
+    look: { hue: p.hue, trait: p.trait, path: p.path, play, skin: p.skin ?? null },
     weather: w === null ? null : { ...w, at: 0 },
     caption: [
       ...(w === null ? [] : [`${w.temp > 0 ? '+' : ''}${w.temp}° ${WEATHER_LABEL[w.kind]}${w.city === '' ? '' : ` · ${w.city}`}`]),

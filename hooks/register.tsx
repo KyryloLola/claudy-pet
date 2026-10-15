@@ -26,7 +26,7 @@ import {
   toolKind,
   work,
 } from './pet'
-import { BAND_H, bandSvg } from './svg'
+import { BAND_H, SKINS, bandSvg, portraitSvg } from './svg'
 import { isSameView, isStaying, sceneOf, viewOf } from './view'
 import { kindOf, weatherJoy } from './weather'
 
@@ -46,6 +46,9 @@ const stroll = atom({ plugin: 'claudy-pet', key: 'stroll' } as const, null as St
 const weather = atom({ plugin: 'claudy-pet', key: 'weather' } as const, null as Weather | null)
 const view = atom({ plugin: 'claudy-pet', key: 'view' } as const, null as BandView | null)
 const settings = atom({ plugin: 'claudy-pet', key: 'settings' } as const, DEFAULT_SETTINGS as PetSettings)
+const pane = atom({ plugin: 'claudy-pet', key: 'pane' } as const, { confirmHatch: false })
+
+const PANE = 'claudy-pet'
 
 const TICK_MS = 5000
 const DECAY_MS = 15_000
@@ -262,6 +265,18 @@ const setSetting = async ($: EngineInterface, key: keyof PetSettings, value: boo
   await refresh($)
 }
 
+const setSkin = async ($: EngineInterface, color: string | null) => {
+  await setPet($, p => ({ ...p, skin: color }))
+  await $.store.set('pet', await read($, pet))
+  await refresh($)
+}
+
+const openStats = async ($: EngineInterface) => {
+  const p = await read($, pet)
+  const opened = await $.ui.open({ id: PANE, title: `${p?.name ?? 'Pet'} · stats` }).catch(() => null)
+  return opened?.isPlaced === true
+}
+
 const renamePet = async ($: EngineInterface, args: string) => {
   const name = args.trim().replace(/\s+/g, ' ').slice(0, 20)
   if (name === '') return 'Give a name: /pet-name Mochi'
@@ -372,6 +387,8 @@ export const register: Register = on => {
   on('command.run', { command: 'pet-stats' }, async $ => {
     const p = await read($, pet)
     if (p === null) return { text: 'No pet yet.' }
+    if (await openStats($)) return { text: `${p.name}'s stats are open in the side pane.` }
+    // No surface places panes here (a plain terminal): print the card instead.
     const album = ((await $.store.get('album')) as AlbumEntry[] | undefined) ?? []
     return { text: statsText(p, await read($, live), await read($, weather), album, await read($, settings), await $.clock.now()) }
   })
@@ -490,6 +507,108 @@ export const register: Register = on => {
         height={BAND_H}
         isInteractive
       />
+    )
+  })
+
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    const els = $.ui.resolve(e)
+    const { Box, Text, Button } = els
+    const p = await read($, pet)
+    const l = await read($, live)
+    if (p === null || l === null) return <Text dimColor>No pet yet.</Text>
+    const s = await read($, settings)
+    const w = await read($, weather)
+    const now = await $.clock.now()
+    const isHidden = await read($, hidden)
+    const confirmHatch = (await read($, pane)).confirmHatch
+    const album = ((await $.store.get('album')) as AlbumEntry[] | undefined) ?? []
+    const scene = sceneOf(p, l, (await read($, stroll)) ?? newStroll(now), s.weather ? w : null, now)
+    const [title = '', ...info] = statsText(p, l, w, [], s, now).split('\n')
+    const toggle = (key: keyof PetSettings) => (
+      <Button key={`set-${key}`} onPress={() => setSetting($, key, !s[key])}>
+        {`${key}: ${s[key] ? 'on' : 'off'}`}
+      </Button>
+    )
+
+    return (
+      <Box flexDirection="column" gap={1} padding={1}>
+        <Box flexDirection="row" gap={2} alignItems="center">
+          {'Svg' in els ? (
+            <els.Svg source={portraitSvg(scene)} alt={`${p.name}, ${scene.mood}`} width={200} height={167} isInteractive />
+          ) : (
+            <Text>{FACE[scene.mood]}</Text>
+          )}
+          <Box flexDirection="column">
+            <Text bold>{title}</Text>
+            {info.slice(0, 4).map((line, i) => (
+              <Text key={`head-${i}`} dimColor>
+                {line}
+              </Text>
+            ))}
+          </Box>
+        </Box>
+        <Box flexDirection="column">
+          {info.slice(4).filter(line => line !== '').map((line, i) => (
+            <Text key={`info-${i}`}>{line}</Text>
+          ))}
+        </Box>
+        <Box flexDirection="row" flexWrap="wrap" gap={1}>
+          <Button key="pane-feed" onPress={() => feedNow($)}>
+            🍪 Feed
+          </Button>
+          <Button key="pane-pat" onPress={() => patNow($)}>
+            ♥ Pat
+          </Button>
+          <Button key="pane-hide" onPress={() => setHidden($, !isHidden)}>
+            {isHidden ? 'Show on the band' : 'Hide from the band'}
+          </Button>
+          {confirmHatch ? (
+            <Box flexDirection="row" gap={1}>
+              <Button key="pane-hatch-yes" variant="primary" onPress={async () => {
+                await update($, pane, () => ({ confirmHatch: false }))
+                await hatch($)
+              }}>
+                {`Retire ${p.name}, hatch a new egg`}
+              </Button>
+              <Button key="pane-hatch-no" onPress={() => update($, pane, () => ({ confirmHatch: false }))}>
+                Cancel
+              </Button>
+            </Box>
+          ) : (
+            <Button key="pane-hatch" onPress={() => update($, pane, () => ({ confirmHatch: true }))}>
+              New egg
+            </Button>
+          )}
+        </Box>
+        <Box flexDirection="column">
+          <Text dimColor>Skin</Text>
+          <Box flexDirection="row" flexWrap="wrap" gap={1}>
+            {SKINS.map(k => (
+              <Button key={`skin-${k.name}`} onPress={() => setSkin($, k.color)}>
+                {(p.skin ?? null) === k.color ? `• ${k.name}` : k.name}
+              </Button>
+            ))}
+          </Box>
+        </Box>
+        <Box flexDirection="column">
+          <Text dimColor>Settings</Text>
+          <Box flexDirection="row" flexWrap="wrap" gap={1}>
+            {toggle('caption')}
+            {toggle('weather')}
+            {toggle('plays')}
+          </Box>
+        </Box>
+        {album.length > 0 && (
+          <Box flexDirection="column">
+            <Text dimColor>Album</Text>
+            {album.map(a => (
+              <Text key={`album-${a.retired}`} dimColor>
+                {`${a.name} · ${a.stage} · ${a.trait}${a.path === null ? '' : ` · ${a.path}`} · ${a.turns} turns`}
+              </Text>
+            ))}
+          </Box>
+        )}
+      </Box>
     )
   })
 }

@@ -138,7 +138,7 @@ const PATH_GEAR: Record<Path, string> = {
 }
 
 const creature = (stage: number, mood: Mood, golden: boolean, look: Look) => {
-  const skin = tint(BODY[stage]!, look.hue)
+  const skin = look.skin ?? tint(BODY[stage]!, look.hue)
   const fill = golden ? 'url(#gold)' : skin
   return `
     <ellipse cx="-22" cy="46" rx="12" ry="6" fill="${golden ? '#d9a400' : skin}" stroke="#2b2f36" stroke-width="2"/>
@@ -222,7 +222,7 @@ const DEFS = `<defs>
 
 /** The pet in its own 240×200 box: shadow, body, mood overlay. */
 /** Who the pet is beyond its stage, and what it is up to: colour, temperament, calling, play, what it carries. */
-export type Look = { hue: number; trait: Trait; path?: Path | null; play?: Play | null }
+export type Look = { hue: number; trait: Trait; path?: Path | null; play?: Play | null; skin?: string | null }
 
 /** Little scenes for each play, in the pet's own 240×200 box. */
 const playScene = (play: Play) => {
@@ -497,3 +497,23 @@ export const bandSvg = (o: BandScene, width: number, anchor: number) => {
   </g>
 </svg>`
 }
+
+/** The skins on offer: a body colour each; "natural" keeps the stage colours. */
+export const SKINS: readonly { name: string; color: string | null }[] = [
+  { name: 'natural', color: null },
+  { name: 'sky', color: '#9fd8ff' },
+  { name: 'mint', color: '#8be0a4' },
+  { name: 'sun', color: '#ffd27a' },
+  { name: 'peach', color: '#ff9f80' },
+  { name: 'rose', color: '#ff9fc2' },
+  { name: 'lilac', color: '#c7a0ff' },
+  { name: 'snow', color: '#eef2f7' },
+]
+
+/** The pet alone on a soft round backdrop, for the pane: no walking, no weather. */
+export const portraitSvg = (o: BandScene) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" width="200" height="167">
+  ${DEFS}
+  <circle cx="120" cy="112" r="86" fill="#e9eef5"/>
+  <ellipse cx="120" cy="186" rx="70" ry="8" fill="#000" opacity=".06"/>
+  ${scene(o.stage, o.mood, o.golden, o.eggXp, o.look)}
+</svg>`
