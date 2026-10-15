@@ -1,0 +1,6 @@
+{
+  "name": "claudy-pet",
+  "version": "0.1.0",
+  "description": "Claudy Pet: a little pet living above the prompt, fed by your prompts, cheered by clean turns, out in your real weather",
+  "types": "./types/index.d.ts"
+}
