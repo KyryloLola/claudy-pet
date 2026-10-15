@@ -70,9 +70,21 @@ Only when the weather setting is on (it is by default):
 
 Nothing about your prompts, tool calls, files, code or conversation is ever sent anywhere. `/pet-weather off` stops both requests.
 
+**Every hook it registers, and what it does with what it sees**
+
+| Hook | What it does |
+| --- | --- |
+| `session.start`, `session.end` | Brings the pet back from its store, starts its timers; saves the pet when the session ends |
+| `prompt.edit` | Checks only whether the prompt box is empty, to hide the band while you type |
+| `prompt.submit` | Counts the prompt as food; the text is not read beyond that |
+| `tool.call` | Counts the tool by name and notes whether it failed; never changes, blocks or answers a call |
+| `turn.complete` | Turns the finished turn and its output token count into experience |
+| `command.run` | Answers only its own commands, each matched by its exact name (`pet-stats`, `pet-feed`, `pet-pat`, `pet-show`, `pet-hide`, `pet-hatch`, `pet-name`, `pet-caption`, `pet-weather`, `pet-plays`); it never sees, changes or runs any other command |
+| `ui.render` | Draws the band above the prompt and the `/pet-stats` pane |
+
 **What it runs**
 
-Nothing. It starts no processes, runs no shell commands, calls no tools and no models. Its `tool.call` hook only observes calls to count them, and always lets them run unchanged. It adds the `/pet-*` commands listed above, each of which only changes the pet or its settings.
+Nothing. It starts no processes, runs no shell commands, calls no tools and no models, and reads no environment variables, credentials, tokens or files outside its own store. Its `tool.call` hook only observes calls to count them, and always lets them run unchanged. It adds the `/pet-*` commands listed above, each of which only changes the pet or its settings.
 
 Like every mod, Claudy Pet runs with your permissions; you can confirm all of the above with `claude plugin validate <path-to-a-clone>`, which lists every hook and call the mod makes.
 

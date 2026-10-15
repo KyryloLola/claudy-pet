@@ -233,11 +233,11 @@ const SWITCHES = [
   ['pet-plays', 'plays', 'Let the pet stroll and play, or keep it calmly in place (on|off)'],
 ] as const
 
-const setSetting = async ($: EngineInterface, key: keyof PetSettings, value: boolean) => {
-  const next = { ...(await read($, settings)), [key]: value }
+const setSetting = async ($: EngineInterface, setting: keyof PetSettings, value: boolean) => {
+  const next = { ...(await read($, settings)), [setting]: value }
   await update($, settings, () => next)
   await $.store.set('settings', next)
-  if (key === 'weather') {
+  if (setting === 'weather') {
     if (value) void refreshWeather($)
     else await update($, weather, () => null)
   }
@@ -373,12 +373,12 @@ export const register: Register = on => {
 
   on('command.run', { command: 'pet-name' }, async ($, e) => ({ text: await renamePet($, e.args) }))
 
-  for (const [command, key] of SWITCHES) {
+  for (const [command, setting] of SWITCHES) {
     on('command.run', { command }, async ($, e) => {
-      const value = parseSwitch(e.args, (await read($, settings))[key])
+      const value = parseSwitch(e.args, (await read($, settings))[setting])
       if (value === null) return { text: `Use /${command} on or /${command} off.` }
-      await setSetting($, key, value)
-      return { text: `${key}: ${value ? 'on' : 'off'}` }
+      await setSetting($, setting, value)
+      return { text: `${setting}: ${value ? 'on' : 'off'}` }
     })
   }
 
@@ -502,9 +502,9 @@ export const register: Register = on => {
     const album = ((await $.store.get('album')) as AlbumEntry[] | undefined) ?? []
     const scene = sceneOf(p, l, (await read($, stroll)) ?? newStroll(now), s.weather ? w : null, now)
     const [title = '', ...info] = statsText(p, l, w, [], s, now).split('\n')
-    const toggle = (key: keyof PetSettings) => (
-      <Button key={`set-${key}`} onPress={() => setSetting($, key, !s[key])}>
-        {`${key}: ${s[key] ? 'on' : 'off'}`}
+    const toggle = (setting: keyof PetSettings) => (
+      <Button key={`set-${setting}`} onPress={() => setSetting($, setting, !s[setting])}>
+        {`${setting}: ${s[setting] ? 'on' : 'off'}`}
       </Button>
     )
 
