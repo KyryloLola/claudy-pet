@@ -1,6 +1,11 @@
 {
   "name": "claudy-pet",
-  "version": "0.1.0",
-  "description": "Claudy Pet: a little pet living above the prompt, fed by your prompts, cheered by clean turns, out in your real weather",
+  "version": "1.0.0",
+  "description": "A little pet that lives above the prompt: fed by your prompts, cheered by clean turns, out in your real weather",
+  "author": { "name": "KaneBlack", "url": "https://github.com/KaneBlack" },
+  "homepage": "https://github.com/KaneBlack/claudy-pet",
+  "repository": "https://github.com/KaneBlack/claudy-pet",
+  "license": "MIT",
+  "keywords": ["mod", "pet", "tamagotchi", "weather", "fun"],
   "types": "./types/index.d.ts"
 }

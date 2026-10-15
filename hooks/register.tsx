@@ -218,27 +218,6 @@ const refreshWeather = async ($: EngineInterface) => {
   }
 }
 
-/**
- * Once, when this plugin's store is still empty: bring over the pet, album, place and visibility the
- * plugin kept while it was named "tamagotchi", from its store file next to this one.
- */
-const importLegacy = async ($: EngineInterface) => {
-  if ((await $.store.get('pet')) !== undefined || (await $.store.get('importedLegacy')) === true) return
-  await $.store.set('importedLegacy', true)
-  const home = await $.env.get('HOME').catch(() => undefined)
-  if (home === undefined) return
-  const dir = `${home}/.claude/plugins/store`
-  const entries = await $.fs.list(dir).catch(() => [])
-  const legacy = entries.find(f => f.name.startsWith('tamagotchi_') && f.name.endsWith('.json'))
-  if (legacy === undefined) return
-  try {
-    const old = JSON.parse(await $.fs.read(`${dir}/${legacy.name}`)) as Record<string, unknown>
-    for (const key of ['pet', 'album', 'place', 'hidden']) if (old[key] !== undefined) await $.store.set(key, old[key])
-  } catch {
-    // an unreadable old store: start with a fresh egg
-  }
-}
-
 const COMMANDS = [
   ['pet-show', 'Show the pet above the prompt'],
   ['pet-hide', 'Hide the pet'],
@@ -339,7 +318,6 @@ const anchorFor = (key: string, now: number) => {
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const now = await $.clock.now()
-    await importLegacy($)
     const opened = openSession((await $.store.get('pet')) as Pet | undefined, await read($, live), now)
     const isReload = opened.kind === 'reload'
     if (opened.kind === 'new') {

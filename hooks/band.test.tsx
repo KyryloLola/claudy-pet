@@ -83,24 +83,6 @@ test('the band yields to a survey', async ($, on) => {
   await ui.unmount()
 })
 
-test('the first start under the new name brings the pet over from the old tamagotchi store, once', async ($, on) => {
-  mock.clock(on, { now: 2_000_000 })
-  engine(on as never)
-  const store = new Map<string, unknown>()
-  on('store.get' as never, ((_$: unknown, e: { key: string }) => ({ value: store.get(e.key) })) as never)
-  on('store.set' as never, ((_$: unknown, e: { key: string; value: unknown }) => {
-    store.set(e.key, e.value)
-    return { value: undefined }
-  }) as never)
-  on('env.get' as never, (() => ({ value: '/Users/me' })) as never)
-  on('fs.list' as never, (() => ({ value: [{ name: 'tamagotchi_inline-abc.json', kind: 'file', size: 10, mtimeMs: 0, isLink: false }] })) as never)
-  const old = { pet: { name: 'Echo', xp: 442, food: 90, energy: 80, joy: 90, born: 0, sessions: 5, turns: 19, errors: 4, golden: false, lastSeen: 2_000_000, trait: 'calm', hue: 72, path: 'engineer', tally: { shell: 101, edit: 3, explore: 9 } }, album: [], hidden: false }
-  on('fs.read' as never, (() => ({ value: JSON.stringify(old) })) as never)
-  await $.session.start(START as never)
-  const pet = store.get('pet') as { name: string; path: string; sessions: number }
-  expect([pet.name, pet.path, pet.sessions]).toEqual(['Echo', 'engineer', 6])
-  expect(store.get('importedLegacy')).toBe(true)
-})
 
 test('a session left unseen goes quiet and draws normally again when looked at', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000_000 })

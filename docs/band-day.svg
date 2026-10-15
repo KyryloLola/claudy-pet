@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 74" width="900" height="74" overflow="hidden">
+  <defs>
+    <style>
+  .ink { fill: #2b2f36; }
+  .stroke { stroke: #2b2f36; stroke-width: 3; stroke-linecap: round; fill: none; }
+  .fill-box { transform-box: fill-box; transform-origin: 50% 50%; }
+  .bob { transform-box: fill-box; transform-origin: 50% 100%; animation: bob 2.4s ease-in-out infinite; }
+  .fast .bob { animation-duration: .55s; }
+  .slow .bob { animation-duration: 4.5s; }
+  .jump .bob { animation: jump .7s ease-in-out infinite; }
+  .t-calm .bob { animation-duration: 3.6s; }
+  .t-energetic .bob { animation: hop .9s ease-in-out infinite; }
+  .glance { animation: glance 5s ease-in-out infinite; }
+  .stretch .bob { animation: stretch 2s ease-in-out infinite; }
+  .flutter { animation: flutter 3s ease-in-out infinite; }
+  .wing { transform-box: fill-box; transform-origin: 50% 100%; animation: wing .25s ease-in-out infinite; }
+  .shoot { animation: shoot 2.6s ease-in infinite; }
+  .leaf { animation: leaf 4s ease-in-out infinite; }
+  .grow { transform-box: fill-box; transform-origin: 50% 100%; animation: grow 8s linear both; }
+  .tip { transform-box: fill-box; transform-origin: 50% 50%; animation: tip 3s ease-in-out infinite; }
+  @keyframes stretch { 0%,100% { transform: scale(1,1); } 40%,60% { transform: scale(.92,1.12); } }
+  @keyframes flutter { 0% { transform: translate(0,0); } 25% { transform: translate(-30px,-14px); } 50% { transform: translate(-60px,4px); } 75% { transform: translate(-28px,18px); } 100% { transform: translate(0,0); } }
+  @keyframes wing { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(.25); } }
+  @keyframes shoot { 0%,40% { transform: translate(0,0); opacity: 0; } 45% { opacity: 1; } 75%,100% { transform: translate(-150px,40px); opacity: 0; } }
+  @keyframes leaf { 0% { transform: translate(0,-30px) rotate(0); opacity: 0; } 10% { opacity: 1; } 50% { transform: translate(-22px,70px) rotate(120deg); } 90% { opacity: 1; } 100% { transform: translate(6px,150px) rotate(260deg); opacity: 0; } }
+  @keyframes grow { from { transform: scale(.3); } to { transform: scale(1.4); } }
+  @keyframes tip { 0%,45%,100% { transform: rotate(0); } 50%,95% { transform: rotate(180deg); } }
+  @keyframes hop { 0%,100% { transform: translateY(0) scale(1.03,.96); } 45% { transform: translateY(-7px) scale(.98,1.03); } }
+  @keyframes glance { 0%,30%,100% { transform: translateX(0); } 40%,55% { transform: translateX(-4px); } 65%,80% { transform: translateX(4px); } }
+  .eyes { transform-box: fill-box; transform-origin: 50% 50%; animation: blink 4.2s infinite; }
+  .wobble { transform-box: fill-box; transform-origin: 50% 100%; animation: wobble 2.2s ease-in-out infinite; }
+  .pulse { animation: pulse 1.2s ease-in-out infinite; }
+  .rise { animation: rise 2.4s ease-in infinite; }
+  .fall { animation: fall 1.1s linear infinite; }
+  .spin { transform-box: fill-box; transform-origin: 50% 50%; animation: spin 2.4s linear infinite; }
+  .chomp { transform-box: fill-box; transform-origin: 50% 50%; animation: chomp .35s ease-in-out infinite; }
+  .shrink { transform-box: fill-box; transform-origin: 50% 50%; animation: shrink 2.5s linear infinite; }
+  .twinkle { transform-box: fill-box; transform-origin: 50% 50%; animation: twinkle 1.6s ease-in-out infinite; }
+  .confetti { animation: confetti 2.2s linear infinite; }
+  @keyframes bob { 0%,100% { transform: scale(1,1); } 50% { transform: scale(1.04,.95); } }
+  @keyframes jump { 0%,100% { transform: translateY(0) scale(1.05,.92); } 50% { transform: translateY(-26px) scale(.96,1.05); } }
+  @keyframes blink { 0%,93%,100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+  @keyframes wobble { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+  @keyframes pulse { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
+  @keyframes rise { 0% { transform: translate(0,0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(14px,-46px); opacity: 0; } }
+  @keyframes fall { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(40px); opacity: 0; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes chomp { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(.3); } }
+  @keyframes shrink { 0% { transform: scale(1); } 90% { transform: scale(.2); opacity: 1; } 100% { transform: scale(.2); opacity: 0; } }
+  @keyframes twinkle { 0%,100% { transform: scale(.4); opacity: .3; } 50% { transform: scale(1); opacity: 1; } }
+  @keyframes confetti { 0% { transform: translateY(-20px) rotate(0); } 100% { transform: translateY(210px) rotate(540deg); } }
+</style>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe680"/><stop offset="1" stop-color="#ffb300"/></linearGradient>
+  </defs>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9d8f7"/><stop offset="1" stop-color="#e6f2fb"/></linearGradient>
+    <clipPath id="frame"><rect width="900" height="74" rx="10"/></clipPath>
+  </defs>
+  <style>
+    .stroll { animation: stroll 1s ease-in-out both; }
+    .hover { animation: hover 7s ease-in-out infinite alternate; }
+    .sway { animation: sway 3.2s ease-in-out infinite; animation-delay: 0.00s; }
+    .sheet { animation: sheet 1s linear infinite; }
+    .flash { opacity: 0; animation: flash 7s linear infinite; }
+    @keyframes stroll { from { transform: translateX(144.4px); } to { transform: translateX(669.2px); } }
+    @keyframes hover { from { transform: translateX(-6px); } to { transform: translateX(6px); } }
+    @keyframes sway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+    @keyframes sheet { from { transform: translateY(0); } to { transform: translateY(74px); } }
+    @keyframes flash { 0%, 88%, 92%, 95%, 100% { opacity: 0; } 89%, 93% { opacity: .55; } }
+  </style>
+  <g clip-path="url(#frame)">
+    <rect width="900" height="74" fill="url(#sky)"/><g transform="translate(558 13) scale(.7)"><g class="spin" style="animation-duration:30s;animation-delay:0.00s">
+      <rect x="-1.5" y="-21" width="3" height="6" rx="1.5" fill="#ffd34d" transform="rotate(0)"/><rect x="-1.5" y="-21" width="3" height="6" rx="1.5" fill="#ffd34d" transform="rotate(45)"/><rect x="-1.5" y="-21" width="3" height="6" rx="1.5" fill="#ffd34d" transform="rotate(90)"/><rect x="-1.5" y="-21" width="3" height="6" rx="1.5" fill="#ffd34d" transform="rotate(135)"/><rect x="-1.5" y="-21" width="3" height="6" rx="1.5" fill="#ffd34d" transform="rotate(180)"/><rect x="-1.5" y="-21" width="3" height="6" rx="1.5" fill="#ffd34d" transform="rotate(225)"/><rect x="-1.5" y="-21" width="3" height="6" rx="1.5" fill="#ffd34d" transform="rotate(270)"/><rect x="-1.5" y="-21" width="3" height="6" rx="1.5" fill="#ffd34d" transform="rotate(315)"/>
+    </g><circle r="12" fill="#ffd34d"/></g><g class="hover" style="animation-duration:7s;animation-delay:0.00s">
+    <g transform="translate(82.9 8) scale(0.55)" fill="#ffffff">
+      <circle cx="0" cy="0" r="9"/><circle cx="11" cy="-5" r="11"/><circle cx="24" cy="0" r="9"/><rect x="0" y="0" width="24" height="9"/>
+    </g></g><g class="hover" style="animation-duration:8s;animation-delay:-1.30s">
+    <g transform="translate(254.2 13) scale(0.75)" fill="#ffffff">
+      <circle cx="0" cy="0" r="9"/><circle cx="11" cy="-5" r="11"/><circle cx="24" cy="0" r="9"/><rect x="0" y="0" width="24" height="9"/>
+    </g></g><path d="M0 67 Q180 54 405 63 T900 65 V74 H0 Z" fill="#bfe0b4" opacity=".8"/><rect y="67" width="900" height="7" fill="#7cc56b"/><rect y="67" width="900" height="2" fill="#66b058"/><path d="M8 67 l-2 -6 M8 67 l1 -8 M8 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M41 67 l-2 -6 M41 67 l1 -8 M41 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M74 67 l-2 -6 M74 67 l1 -8 M74 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M92 67 l-2 -6 M92 67 l1 -8 M92 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M125 67 l-2 -6 M125 67 l1 -8 M125 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M158 67 l-2 -6 M158 67 l1 -8 M158 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M176 67 l-2 -6 M176 67 l1 -8 M176 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M209 67 l-2 -6 M209 67 l1 -8 M209 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M242 67 l-2 -6 M242 67 l1 -8 M242 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M260 67 l-2 -6 M260 67 l1 -8 M260 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M293 67 l-2 -6 M293 67 l1 -8 M293 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M326 67 l-2 -6 M326 67 l1 -8 M326 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M344 67 l-2 -6 M344 67 l1 -8 M344 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M377 67 l-2 -6 M377 67 l1 -8 M377 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M410 67 l-2 -6 M410 67 l1 -8 M410 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M428 67 l-2 -6 M428 67 l1 -8 M428 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M461 67 l-2 -6 M461 67 l1 -8 M461 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M494 67 l-2 -6 M494 67 l1 -8 M494 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M512 67 l-2 -6 M512 67 l1 -8 M512 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M545 67 l-2 -6 M545 67 l1 -8 M545 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M578 67 l-2 -6 M578 67 l1 -8 M578 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M596 67 l-2 -6 M596 67 l1 -8 M596 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M629 67 l-2 -6 M629 67 l1 -8 M629 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M662 67 l-2 -6 M662 67 l1 -8 M662 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M680 67 l-2 -6 M680 67 l1 -8 M680 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M713 67 l-2 -6 M713 67 l1 -8 M713 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M746 67 l-2 -6 M746 67 l1 -8 M746 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M764 67 l-2 -6 M764 67 l1 -8 M764 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M797 67 l-2 -6 M797 67 l1 -8 M797 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M830 67 l-2 -6 M830 67 l1 -8 M830 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M848 67 l-2 -6 M848 67 l1 -8 M848 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><path d="M881 67 l-2 -6 M881 67 l1 -8 M881 67 l4 -5" stroke="#66b058" stroke-width="1.6" stroke-linecap="round"/><g transform="translate(18 69) scale(.62) translate(-18 -69)"><g class="sway" style="transform-origin:18px 69px">
+    <rect x="15" y="43" width="6" height="26" fill="#7a5636"/>
+    <circle cx="18" cy="33" r="17" fill="#4f9a52"/>
+    <circle cx="9" cy="41" r="11" fill="#6fb86a"/>
+    <circle cx="28" cy="39" r="10" fill="#6fb86a"/>
+    
+  </g></g><g transform="translate(878 69) scale(.7) translate(-878 -69)"><g class="sway" style="transform-origin:878px 69px">
+    <circle cx="868" cy="60" r="11" fill="#5aa957"/>
+    <circle cx="884" cy="56" r="13" fill="#5aa957"/>
+    <circle cx="896" cy="62" r="9" fill="#5aa957"/>
+    
+    
+  </g></g>
+    <g class="stroll" style="animation-duration:14000ms;animation-delay:0ms"><g >
+      <g transform="translate(0 1) scale(0.36)"><ellipse cx="120" cy="182" rx="42.32" ry="7" fill="#000" opacity=".12"/>
+  <g class="t-calm"><g transform="translate(120 132) scale(0.92)"><g class="bob">
+    <ellipse cx="-22" cy="46" rx="12" ry="6" fill="#ffd27a" stroke="#2b2f36" stroke-width="2"/>
+    <ellipse cx="22" cy="46" rx="12" ry="6" fill="#ffd27a" stroke="#2b2f36" stroke-width="2"/>
+    <path d="M0 -48 C34 -48 54 -22 54 8 C54 36 32 48 0 48 C-32 48 -54 36 -54 8 C-54 -22 -34 -48 0 -48 Z"
+      fill="#ffd27a" stroke="#2b2f36" stroke-width="3"/>
+    <ellipse cx="0" cy="26" rx="28" ry="16" fill="#fff" opacity=".35"/>
+    <g class="wobble"><path class="stroke" d="M0 -46 Q4 -58 0 -68"/><circle cx="0" cy="-71" r="5" fill="#ff6b8a"/></g>
+    <circle cx="-34" cy="8" r="6" fill="#ff8fa3" opacity=".55"/>
+    <circle cx="34" cy="8" r="6" fill="#ff8fa3" opacity=".55"/>
+    <g class="eyes"><ellipse cx="-18" cy="-8" rx="9" ry="11" fill="#fff"/><ellipse cx="18" cy="-8" rx="9" ry="11" fill="#fff"/>
+    <g class=""><circle class="ink" cx="-18" cy="-7" r="5"/><circle class="ink" cx="18" cy="-7" r="5"/>
+    <circle cx="-16" cy="-10" r="1.6" fill="#fff"/><circle cx="20" cy="-10" r="1.6" fill="#fff"/></g></g>
+    <path class="stroke" d="M-10 14 Q0 22 10 14"/>
+    <path d="M-46 -30 Q0 -44 46 -30" stroke="#5d6773" stroke-width="5" fill="none"/>
+    <circle cx="-14" cy="-36" r="9" fill="#9fd8ff" stroke="#2b2f36" stroke-width="3"/><circle cx="14" cy="-36" r="9" fill="#9fd8ff" stroke="#2b2f36" stroke-width="3"/>
+</g></g></g>
+  
+  
+  </g>
+    </g></g>
+    
+    <g font-family="system-ui,-apple-system,sans-serif" font-size="11">
+    <rect x="735" y="5" width="159" height="32" rx="7" fill="#ffffff" opacity="0.72"/>
+    <text x="887" y="17" text-anchor="end" fill="#1d232b" font-weight="600">+18° partly cloudy · Kyiv</text><text x="887" y="30" text-anchor="end" fill="#1d232b" opacity=".85">Echo · calm · chilling</text>
+  </g>
+  </g>
+</svg>

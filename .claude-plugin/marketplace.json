@@ -1,0 +1,18 @@
+{
+  "name": "claudy-pet",
+  "owner": {
+    "name": "KaneBlack",
+    "url": "https://github.com/KaneBlack"
+  },
+  "metadata": {
+    "description": "Claudy Pet, a little pet that lives above the Claude Code prompt"
+  },
+  "plugins": [
+    {
+      "name": "claudy-pet",
+      "source": "./",
+      "description": "A little pet that lives above the prompt: fed by your prompts, cheered by clean turns, out in your real weather",
+      "version": "1.0.0"
+    }
+  ]
+}
