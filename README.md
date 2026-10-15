@@ -13,13 +13,17 @@ It is a [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview)
 In a Claude Code session:
 
 ```
-/plugin marketplace add KaneBlack/claudy-pet
+/plugin marketplace add KyryloLola/claudy-pet
 /plugin install claudy-pet@claudy-pet
 ```
 
 It draws in the **Claude Code CLI**, the **Code tab of the Claude Desktop app** and, where supported, the **VS Code extension**. Elsewhere its hooks still run and `/pet-stats` prints a text card.
 
-In a terminal the band is three rows of pixel art made of half blocks, two pixels to a cell: the pet, the weather and the grass, with the caption in a zone of its own on the right. Every row is exactly as wide as the terminal, so nothing wraps; a narrow terminal drops the caption, then the weather, and below 18 columns shows one line of text.
+## In the terminal
+
+The CLI gets its own pixel-art band: three rows of half blocks, two pixels to a cell, with the pet, the weather and the grass, and the caption in a zone of its own on the right. Every row is exactly as wide as the terminal, so nothing wraps in any terminal or at any size: a narrower one drops the weather from the caption, then the caption and clouds, and below 18 columns shows one line of text. `/pet-stats` shows the same pixel pet beside its stats.
+
+![Claudy Pet in a terminal: a sunny day, rain while Claude thinks, asleep under the stars](docs/terminal.svg)
 
 ## What it does
 
@@ -99,7 +103,7 @@ The band is one SVG picture whose source only changes when something you can see
 ## Develop
 
 ```
-git clone https://github.com/KaneBlack/claudy-pet
+git clone https://github.com/KyryloLola/claudy-pet
 claude plugin validate claudy-pet
 claude plugin test claudy-pet
 claude --plugin-dir claudy-pet

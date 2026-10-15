@@ -1,13 +1,13 @@
 {
   "name": "claudy-pet",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A little pet that lives above the prompt: fed by your prompts, cheered by clean turns, out in your real weather",
   "author": {
-    "name": "KaneBlack",
-    "url": "https://github.com/KaneBlack"
+    "name": "KyryloLola",
+    "url": "https://github.com/KyryloLola"
   },
-  "homepage": "https://github.com/KaneBlack/claudy-pet",
-  "repository": "https://github.com/KaneBlack/claudy-pet",
+  "homepage": "https://github.com/KyryloLola/claudy-pet",
+  "repository": "https://github.com/KyryloLola/claudy-pet",
   "license": "MIT",
   "keywords": [
     "mod",
@@ -18,5 +18,5 @@
   ],
   "types": "./types/index.d.ts",
   "icon": "./.claude-plugin/icon.png",
-  "privacyPolicyUrl": "https://github.com/KaneBlack/claudy-pet/blob/main/PRIVACY.md"
+  "privacyPolicyUrl": "https://github.com/KyryloLola/claudy-pet/blob/main/PRIVACY.md"
 }

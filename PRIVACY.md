@@ -15,4 +15,4 @@ These services' own privacy policies apply to those requests: [ipwho.is (by ipwh
 
 **Turning it off.** `/pet-weather off` stops all network requests. Uninstalling the plugin removes the mod; its local store can be removed with it.
 
-Questions: open an issue at https://github.com/KaneBlack/claudy-pet/issues.
+Questions: open an issue at https://github.com/KyryloLola/claudy-pet/issues.
