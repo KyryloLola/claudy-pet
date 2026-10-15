@@ -23,18 +23,26 @@ export const parseSwitch = (args: string, current: boolean): boolean | null => {
   return null
 }
 
+/** One retired pet, for the album list. */
+export const albumLine = (a: AlbumEntry) => {
+  const job = a.path
+  const suffix = job === null ? '' : ` · ${job}`
+  return `${a.name} · ${a.stage} · ${a.trait}${suffix} · ${a.turns} turns`
+}
+
 /** A plain-text card of everything about the pet, for /pet-stats. */
 export const statsText = (p: Pet, l: Live | null, w: Weather | null, album: readonly AlbumEntry[], s: PetSettings, now: number) => {
   const stage = stageOf(p.xp)
   const nextStage = STAGES[stage + 1]
   const xpLine = nextStage === undefined ? `${Math.floor(p.xp)} xp · top stage` : `${Math.floor(p.xp)} / ${nextStage.xp} xp → ${nextStage.name}`
+  const { shell: commands, edit: edits, explore: explores } = p.tally
   const calling = p.path === null ? (stage >= 3 ? 'none yet' : 'decided at Teen') : PATH_LINE[p.path]
   const lines = [
     `${p.name} · ${STAGES[stage]!.name}${p.golden ? ' · golden' : ''}`,
     `${xpLine}`,
     `trait: ${p.trait} (${TRAIT[p.trait].line})`,
     `calling: ${calling}`,
-    `work seen: shell ${p.tally.shell} · edits ${p.tally.edit} · explore ${p.tally.explore}`,
+    `work seen: commands ${commands} · edits ${edits} · explore ${explores}`,
     '',
     `food   ${bar(p.food)} ${Math.round(p.food)}`,
     `energy ${bar(p.energy)} ${Math.round(p.energy)}`,
@@ -47,7 +55,7 @@ export const statsText = (p: Pet, l: Live | null, w: Weather | null, album: read
   ]
   if (album.length > 0) {
     lines.push('', 'album:')
-    for (const a of album) lines.push(`  ${a.name} · ${a.stage} · ${a.trait}${a.path === null ? '' : ` · ${a.path}`} · ${a.turns} turns`)
+    for (const a of album) lines.push(albumLine(a))
   }
   return lines.join('\n')
 }

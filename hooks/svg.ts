@@ -137,6 +137,12 @@ const PATH_GEAR: Record<Path, string> = {
     <path d="M-26 -42 Q-24 -66 0 -66 Q24 -66 26 -42 Z" fill="#d9b67a" stroke="#2b2f36" stroke-width="3"/><rect x="-25" y="-50" width="50" height="5" fill="#8a5d31"/>`,
 }
 
+/** The gear of the pet's calling, from Teen on. */
+const calling = (stage: number, look: Look) => {
+  const job = look.path ?? null
+  return stage >= 3 && job !== null ? PATH_GEAR[job] : ''
+}
+
 const creature = (stage: number, mood: Mood, golden: boolean, look: Look) => {
   const skin = look.skin ?? tint(BODY[stage]!, look.hue)
   const fill = golden ? 'url(#gold)' : skin
@@ -151,7 +157,7 @@ const creature = (stage: number, mood: Mood, golden: boolean, look: Look) => {
     <circle cx="34" cy="8" r="6" fill="#ff8fa3" opacity=".55"/>
     ${eyes(look.play === 'stars' ? 'thinking' : mood, look.trait, golden ? '#ffd54a' : skin)}
     ${look.play === 'yawn' ? '<ellipse class="pulse" cx="0" cy="18" rx="7" ry="9" fill="#7a2f3a"/>' : mouth(mood)}
-    ${stage >= 3 && look.path ? PATH_GEAR[look.path] : ''}
+    ${calling(stage, look)}
 `
 }
 

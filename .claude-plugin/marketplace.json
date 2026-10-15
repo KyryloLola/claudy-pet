@@ -12,7 +12,7 @@
       "name": "claudy-pet",
       "source": "./",
       "description": "A little pet that lives above the prompt: fed by your prompts, cheered by clean turns, out in your real weather",
-      "version": "1.0.2"
+      "version": "1.0.3"
     }
   ]
 }

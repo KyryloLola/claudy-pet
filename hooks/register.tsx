@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { AlbumEntry, BandView, Live, Mood, Pet, PetSettings, Stroll, Weather } from '../types'
 import { openSession } from './lifecycle'
-import { DEFAULT_SETTINGS, parseSwitch, statsText } from './stats'
+import { DEFAULT_SETTINGS, albumLine, parseSwitch, statsText } from './stats'
 import { layoutOf } from './layout'
 import {
   FACE,
@@ -305,7 +305,8 @@ const checkPath = async ($: EngineInterface) => {
   const settled = settlePath(p)
   if (!settled.isNew) return
   await setPet($, () => settled.pet)
-  $.ui.toast(`${p.name} became ${settled.pet.path === 'explorer' ? 'an' : 'a'} ${settled.pet.path}!`, { timeoutMs: 6000 })
+  const job = String(settled.pet.path)
+  $.ui.toast(`${p.name} became ${job === 'explorer' ? 'an' : 'a'} ${job}!`, { timeoutMs: 6000 })
   await flash($, 'party', 5000)
 }
 
@@ -581,7 +582,7 @@ export const register: Register = on => {
             <Text dimColor>Album</Text>
             {album.map(a => (
               <Text key={`album-${a.retired}`} dimColor>
-                {`${a.name} · ${a.stage} · ${a.trait}${a.path === null ? '' : ` · ${a.path}`} · ${a.turns} turns`}
+                {albumLine(a)}
               </Text>
             ))}
           </Box>
