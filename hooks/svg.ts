@@ -1,4 +1,4 @@
-import type { BandScene, Mood, Path, Play, Trait, Weather, WeatherKind } from '../types'
+import type { BandScene, Mood, Path, Play, Trait, Weather, WeatherKind, WorldScene } from '../types'
 
 export const BODY = ['#f3e6c8', '#9fd8ff', '#8be0a4', '#ffd27a', '#ff9f80', '#c7a0ff']
 const SCALE = [1, 0.72, 0.82, 0.92, 1, 1.06]
@@ -254,12 +254,15 @@ const playScene = (play: Play) => {
 
 const PLAIN: Look = { hue: 0, trait: 'calm' }
 
+/** Where the feet stand in the pet's own box: smaller stages scale toward it, so no stage floats. */
+const FEET = 184
+
 const scene = (stage: number, mood: Mood, golden: boolean, xp: number, look: Look = PLAIN) => {
   const motion = mood === 'sleeping' ? 'slow' : mood === 'party' || look.play === 'puddle' ? 'jump'
     : look.play === 'stretch' ? 'stretch' : `t-${look.trait}`
   const body = stage === 0 ? egg(mood, xp) : creature(stage, mood, golden, look)
   return `<ellipse cx="120" cy="182" rx="${46 * SCALE[stage]!}" ry="7" fill="#000" opacity=".12"/>
-  <g class="${motion}"><g transform="translate(120 ${stage === 0 ? 124 : 132}) scale(${SCALE[stage]})"><g class="bob">${body}</g></g></g>
+  <g class="${motion}"><g transform="translate(120 ${stage === 0 ? 124 : FEET - 52 * SCALE[stage]!}) scale(${SCALE[stage]})"><g class="bob">${body}</g></g></g>
   ${golden ? sparkles() : ''}
   ${overlay(mood)}
   ${look.play ? playScene(look.play) : ''}`
@@ -302,9 +305,19 @@ const cloud = (x: number, y: number, k: number, fill: string, swayS: number, now
       <circle cx="0" cy="0" r="9"/><circle cx="11" cy="-5" r="11"/><circle cx="24" cy="0" r="9"/><rect x="0" y="0" width="24" height="9"/>
     </g></g>`
 
-const tree = (x: number, base: number, night: boolean, snowy: boolean) => {
-  const leaf = night ? '#2f5a3a' : '#4f9a52'
-  const leafLight = night ? '#3b6c45' : '#6fb86a'
+type Season = NonNullable<WorldScene['season']>
+
+/** Leaf colours by season, day and night: autumn turns, a snowless winter goes dull. */
+const LEAVES: Record<Season | 'none', { day: [string, string]; night: [string, string] }> = {
+  none: { day: ['#4f9a52', '#6fb86a'], night: ['#2f5a3a', '#3b6c45'] },
+  spring: { day: ['#4f9a52', '#6fb86a'], night: ['#2f5a3a', '#3b6c45'] },
+  summer: { day: ['#4f9a52', '#6fb86a'], night: ['#2f5a3a', '#3b6c45'] },
+  autumn: { day: ['#d27a2c', '#eda23e'], night: ['#6e4424', '#80552c'] },
+  winter: { day: ['#5f7c62', '#738f74'], night: ['#2c4232', '#36503c'] },
+}
+
+const tree = (x: number, base: number, night: boolean, snowy: boolean, season: Season | null = null) => {
+  const [leaf, leafLight] = LEAVES[season ?? 'none'][night ? 'night' : 'day']
   return `<g transform="translate(${x} ${base}) scale(.62) translate(${-x} ${-base})"><g class="sway" style="transform-origin:${x}px ${base}px">
     <rect x="${x - 3}" y="${base - 26}" width="6" height="26" fill="${night ? '#4a3a2c' : '#7a5636'}"/>
     <circle cx="${x}" cy="${base - 36}" r="17" fill="${leaf}"/>
@@ -314,8 +327,8 @@ const tree = (x: number, base: number, night: boolean, snowy: boolean) => {
   </g></g>`
 }
 
-const bush = (x: number, base: number, night: boolean, snowy: boolean, flowers: boolean) => {
-  const leaf = night ? '#2f5a3a' : '#5aa957'
+const bush = (x: number, base: number, night: boolean, snowy: boolean, flowers: boolean, season: Season | null = null) => {
+  const leaf = season === 'autumn' || season === 'winter' ? LEAVES[season][night ? 'night' : 'day'][0] : night ? '#2f5a3a' : '#5aa957'
   return `<g transform="translate(${x} ${base}) scale(.7) translate(${-x} ${-base})"><g class="sway" style="transform-origin:${x}px ${base}px">
     <circle cx="${x - 10}" cy="${base - 9}" r="11" fill="${leaf}"/>
     <circle cx="${x + 6}" cy="${base - 13}" r="13" fill="${leaf}"/>
@@ -326,12 +339,13 @@ const bush = (x: number, base: number, night: boolean, snowy: boolean, flowers: 
 }
 
 /** Sky, sun or moon, clouds, hills, trees on the walls, the ground: everything behind the pet. */
-const backdrop = (width: number, w: Weather, nowMs: number) => {
+const backdrop = (width: number, w: Weather, nowMs: number, season: Season | null = null) => {
   const night = !w.isDay
   const [top, bottom] = (night ? SKY_NIGHT : SKY_DAY)[w.kind]
   const snowy = w.kind === 'snow'
-  const ground = snowy ? (night ? '#b9c4d6' : '#f4f7fb') : night ? '#2f5134' : '#7cc56b'
-  const groundDark = snowy ? (night ? '#97a3b8' : '#dfe6ee') : night ? '#264229' : '#66b058'
+  const turned = season === 'autumn' ? (night ? ['#4a4a2c', '#3d3d24'] : ['#b8c26a', '#9dab52']) : season === 'winter' ? (night ? ['#2f4434', '#27392b'] : ['#9db79a', '#86a283']) : null
+  const ground = snowy ? (night ? '#b9c4d6' : '#f4f7fb') : turned !== null ? turned[0]! : night ? '#2f5134' : '#7cc56b'
+  const groundDark = snowy ? (night ? '#97a3b8' : '#dfe6ee') : turned !== null ? turned[1]! : night ? '#264229' : '#66b058'
   const hill = snowy ? (night ? '#5b6782' : '#dbe3ec') : night ? '#26354a' : '#bfe0b4'
   const isOpen = w.kind === 'clear' || w.kind === 'partly'
   let out = `<rect width="${width}" height="${BAND_H}" fill="url(#sky)"/>`
@@ -373,8 +387,77 @@ const backdrop = (width: number, w: Weather, nowMs: number) => {
     }).join('')
   }
 
-  out += tree(WALL / 2 + 2, BAND_H - FLOOR + 2, night, snowy)
-  out += bush(width - WALL / 2 - 6, BAND_H - FLOOR + 2, night, snowy, w.kind === 'clear' && !night)
+  if (season === 'autumn' && !snowy) {
+    out += [[60, '#e3913f'], [width * 0.34, '#f2b84b'], [width * 0.58, '#d27a2c'], [width * 0.79, '#f2b84b']]
+      .map(([x, c], i) => `<ellipse cx="${Number(x).toFixed(1)}" cy="${BAND_H - FLOOR + 2}" rx="2.6" ry="1.3" fill="${c}" transform="rotate(${i % 2 ? 20 : -15} ${Number(x).toFixed(1)} ${BAND_H - FLOOR + 2})"/>`)
+      .join('')
+  }
+  out += tree(WALL / 2 + 2, BAND_H - FLOOR + 2, night, snowy, season)
+  out += bush(width - WALL / 2 - 6, BAND_H - FLOOR + 2, night, snowy, (w.kind === 'clear' && !night) || (season === 'spring' && !night), season)
+  return out
+}
+
+/*
+ * The slow modules: a home by the tree, a garden by the bush, the season on the tree and one small piece for
+ * a holiday. All static: they add no animation, and they change at most once a day.
+ */
+const GROUND = BAND_H - FLOOR
+const HOME_X = 46
+const HOLIDAY_X = 94
+
+/** Blossom in spring over the tree on the left wall (crown near 18, 46); the other seasons are in the leaf colours. */
+const seasonTree = (season: WorldScene['season']) => {
+  const ring = (fill: string, n: number) => Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2
+    return `<circle cx="${(18 + Math.cos(a) * 7).toFixed(1)}" cy="${(46 + Math.sin(a) * 5).toFixed(1)}" r="2.1" fill="${fill}"/>`
+  }).join('')
+  return season === 'spring' ? ring('#ffc2d6', 8) : ''
+}
+
+const bench = (x: number) => `<g fill="#8a5d31"><rect x="${x}" y="${GROUND - 9}" width="26" height="3" rx="1"/><rect x="${x}" y="${GROUND - 15}" width="26" height="2.5" rx="1"/><rect x="${x + 3}" y="${GROUND - 6}" width="2.5" height="6"/><rect x="${x + 20}" y="${GROUND - 6}" width="2.5" height="6"/></g>`
+
+const hutFrame = (x: number) => `<g stroke="#8a5d31" stroke-width="2.2" stroke-linecap="round" fill="none"><path d="M${x} ${GROUND} V${GROUND - 22} M${x + 34} ${GROUND} V${GROUND - 22} M${x - 3} ${GROUND - 21} L${x + 17} ${GROUND - 36} L${x + 37} ${GROUND - 21}"/><path d="M${x} ${GROUND - 8} H${x + 34} M${x} ${GROUND - 15} H${x + 20}" stroke="#b07d4a"/></g><rect x="${x + 22}" y="${GROUND - 4}" width="12" height="4" fill="#b07d4a"/>`
+
+const cottage = (x: number, isLit: boolean, isSnowy: boolean, hasGarland: boolean) => `<g>
+  <rect x="${x}" y="${GROUND - 24}" width="36" height="24" fill="#e9d2a8" stroke="#a7834f" stroke-width="1.2"/>
+  <path d="M${x - 4} ${GROUND - 23} L${x + 18} ${GROUND - 40} L${x + 40} ${GROUND - 23} Z" fill="#c4553d"/>
+  ${isSnowy ? `<path d="M${x - 4} ${GROUND - 23} L${x + 18} ${GROUND - 40} L${x + 40} ${GROUND - 23} L${x + 34} ${GROUND - 26} L${x + 18} ${GROUND - 37} L${x + 2} ${GROUND - 26} Z" fill="#fff"/>` : ''}
+  <rect x="${x + 5}" y="${GROUND - 17}" width="10" height="9" fill="${isLit ? '#ffd86b' : '#9fc7e6'}"/><rect x="${x + 21}" y="${GROUND - 15}" width="9" height="15" fill="#8a5d31"/>
+  ${hasGarland ? Array.from({ length: 7 }, (_, i) => `<circle cx="${x - 1 + i * 6.2}" cy="${GROUND - 22 + (i % 2) * 1.5}" r="1.5" fill="${['#ff5b5b', '#ffd34d', '#5bd17a', '#6aa7ff'][i % 4]}"/>`).join('') : ''}
+</g>`
+
+const flowers = (x: number, n: number, isFaded: boolean) => Array.from({ length: n }, (_, i) => {
+  const fx = x + i * 7 + (i % 2) * 2
+  const h = 6 + (i % 3) * 2
+  const c = isFaded ? '#c9a46a' : ['#ff7aa2', '#ffd34d', '#ffffff', '#c7a0ff'][i % 4]
+  return `<path d="M${fx} ${GROUND} v-${h}" stroke="#4f9a52" stroke-width="1.3"/><circle cx="${fx}" cy="${GROUND - h}" r="2.2" fill="${c}"/>`
+}).join('')
+
+const fir = (x: number, hasStar: boolean) => `<path d="M${x} ${GROUND - 22} L${x - 8} ${GROUND - 4} H${x + 8} Z" fill="#2f7a46"/><rect x="${x - 1.5}" y="${GROUND - 4}" width="3" height="4" fill="#7a5636"/>
+  ${[[-3, -9], [3, -13], [-1, -16], [4, -6], [-5, -5]].map(([dx, dy], i) => `<circle cx="${x + dx!}" cy="${GROUND + dy!}" r="1.3" fill="${['#ff5b5b', '#ffd34d', '#6aa7ff'][i % 3]}"/>`).join('')}
+  ${hasStar ? `<circle cx="${x}" cy="${GROUND - 23}" r="2.2" fill="#ffd34d"/>` : ''}`
+
+const HOLIDAY: Record<NonNullable<WorldScene['holiday']>, (x: number) => string> = {
+  newyear: x => fir(x, false),
+  xmas: x => fir(x, true),
+  valentine: x => `<path d="M${x} ${GROUND - 3} l-6 -6 a3.4 3.4 0 0 1 6 -4 a3.4 3.4 0 0 1 6 4 Z" fill="#ff6b8a"/>`,
+  earth: x => `<path d="M${x} ${GROUND} v-9" stroke="#4f9a52" stroke-width="1.6"/><ellipse cx="${x - 3}" cy="${GROUND - 9}" rx="3.5" ry="2" fill="#6fb86a"/><ellipse cx="${x + 3}" cy="${GROUND - 11}" rx="3.5" ry="2" fill="#6fb86a"/>`,
+  halloween: x => `<ellipse cx="${x}" cy="${GROUND - 4}" rx="6" ry="4.5" fill="#f07f1f"/><path d="M${x} ${GROUND - 8} v-3" stroke="#4f7a32" stroke-width="1.6"/>`,
+  birthday: x => `<rect x="${x - 7}" y="${GROUND - 8}" width="14" height="8" rx="1.5" fill="#f6d7c3"/><rect x="${x - 7}" y="${GROUND - 8}" width="14" height="2.5" fill="#ff9fc2"/><path d="M${x} ${GROUND - 8} v-4" stroke="#6aa7ff" stroke-width="1.4"/><circle cx="${x}" cy="${GROUND - 13}" r="1.3" fill="#ffd34d"/>`,
+}
+
+/** A small balloon tied by the tree, one day a year. */
+const balloon = () => `<path d="M38 ${GROUND} q3 -14 1 -27" stroke="#9aa3ad" stroke-width=".8" fill="none"/><ellipse cx="39" cy="${GROUND - 31}" rx="4" ry="5" fill="#ff7aa2"/><circle cx="37.8" cy="${GROUND - 33}" r="1" fill="#fff" opacity=".7"/>`
+
+const worldSvg = (o: WorldScene, width: number, w: Weather) => {
+  const isWinter = o.season === 'winter' || w.kind === 'snow'
+  let out = seasonTree(o.season)
+  if (o.home === 'bench') out += bench(HOME_X)
+  if (o.home === 'frame') out += hutFrame(HOME_X)
+  if (o.home === 'cottage') out += cottage(HOME_X, !w.isDay, isWinter, o.holiday === 'newyear' || o.holiday === 'xmas')
+  if (o.garden !== 'none' && !isWinter) out += flowers(width - 118, o.garden === 'bed' ? 5 : 3, o.season === 'autumn')
+  if (o.holiday !== null) out += HOLIDAY[o.holiday](HOLIDAY_X)
+  if (o.balloon) out += balloon()
   return out
 }
 
@@ -494,7 +577,8 @@ export const bandSvg = (o: BandScene, width: number, anchor: number) => {
     @keyframes flash { 0%, 88%, 92%, 95%, 100% { opacity: 0; } 89%, 93% { opacity: .55; } }
   </style>
   <g clip-path="url(#frame)">
-    ${backdrop(width, w, anchor)}
+    ${backdrop(width, w, anchor, o.world?.season ?? null)}
+    ${o.world === null ? '' : worldSvg(o.world, width, w)}
     <g ${place}><g ${turn}>
       <g transform="translate(0 ${BAND_H - 200 * BAND_SCALE - 1}) scale(${BAND_SCALE})">${scene(o.stage, o.mood, o.golden, o.eggXp, o.look)}${gear(o.stage, w)}</g>
     </g></g>

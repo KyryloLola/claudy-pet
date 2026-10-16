@@ -1,6 +1,7 @@
 import type { BandScene, BandView, Live, Pet, PetSettings, Stroll, Weather } from '../types'
-import { MOOD_SHORT, STAGES, moodOf, stageOf } from './pet'
+import { MOOD_SHORT, STAGES, moodOf } from './pet'
 import { WEATHER_LABEL } from './weather'
+import { stageFor, worldOf } from './world'
 
 /** Moods in which the pet stays where it is instead of strolling. */
 export const STAYS = ['sleeping', 'eating', 'party', 'loved'] as const
@@ -8,9 +9,9 @@ export const STAYS = ['sleeping', 'eating', 'party', 'loved'] as const
 const eggTurnsLeft = (xp: number) => Math.max(1, Math.ceil((STAGES[1].xp - xp) / 3))
 
 /** What the band shows right now, from the pet, the session and the weather. Pure: same inputs, same scene. */
-export const sceneOf = (p: Pet, l: Live, st: Stroll, w: Weather | null, now: number): BandScene => {
+export const sceneOf = (p: Pet, l: Live, st: Stroll, w: Weather | null, now: number, isLonging = false): BandScene => {
   const mood = moodOf(p, l, now)
-  const stage = stageOf(p.xp)
+  const stage = stageFor(p, now, isLonging)
   const play = mood === 'idle' && l.play !== null && l.playUntil > now ? l.play : null
   const status = stage === 0 ? `egg, hatches in ~${eggTurnsLeft(p.xp)} turns` : MOOD_SHORT[mood]
   return {
@@ -25,13 +26,14 @@ export const sceneOf = (p: Pet, l: Live, st: Stroll, w: Weather | null, now: num
       `${p.name} · ${p.trait} · ${status}`,
     ],
     stride: { from: st.from, to: st.to, startedAt: st.startedAt, durMs: st.durMs, facing: st.facing },
+    world: null,
   }
 }
 
-const ALL_ON: PetSettings = { caption: true, weather: true, plays: true }
+const ALL_ON: PetSettings = { caption: true, weather: true, plays: true, longing: false, world: false, seasons: false }
 
 export const viewOf = (p: Pet, hidden: boolean, l: Live, st: Stroll, w: Weather | null, now: number, s: PetSettings = ALL_ON): BandView => {
-  const scene = sceneOf(p, l, st, s.weather ? w : null, now)
+  const scene = sceneOf(p, l, st, s.weather ? w : null, now, s.longing)
   return {
     isHidden: hidden,
     isTyping: l.isTyping,
@@ -41,6 +43,7 @@ export const viewOf = (p: Pet, hidden: boolean, l: Live, st: Stroll, w: Weather 
       ...scene,
       caption: s.caption ? scene.caption : [],
       look: s.plays ? scene.look : { ...scene.look, play: null },
+      world: worldOf(p, w, now, s),
     },
   }
 }

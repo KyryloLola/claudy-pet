@@ -53,6 +53,8 @@ export const newPet = (now: number, rand: () => number = Math.random, avoid: rea
   lastSeen: now,
   path: null,
   tally: { shell: 0, edit: 0, explore: 0 },
+  stage: 0,
+  days: 0,
 })
 
 /** A pet saved before temperaments existed keeps its name and colour and gets a temperament now. */
@@ -171,8 +173,8 @@ export const tallyUp = (pet: Pet, kind: keyof Tally): Pet => ({ ...pet, tally: {
 const PATH_OF: Record<keyof Tally, Path> = { shell: 'engineer', edit: 'writer', explore: 'explorer' }
 
 /** At Teen and beyond, a pet with no calling yet takes the one its tally points to. */
-export const settlePath = (pet: Pet): { pet: Pet; isNew: boolean } => {
-  if (pet.path !== null || stageOf(pet.xp) < 3) return { pet, isNew: false }
+export const settlePath = (pet: Pet, stage = stageOf(pet.xp)): { pet: Pet; isNew: boolean } => {
+  if (pet.path !== null || stage < 3) return { pet, isNew: false }
   const ranked = (Object.keys(pet.tally) as (keyof Tally)[]).sort((a, b) => pet.tally[b] - pet.tally[a])
   const top = ranked[0]!
   if (pet.tally[top] === 0) return { pet, isNew: false }

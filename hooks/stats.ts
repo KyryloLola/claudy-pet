@@ -1,8 +1,9 @@
 import type { AlbumEntry, Live, Pet, PetSettings, Weather } from '../types'
-import { PATH_LINE, STAGES, TRAIT, stageOf } from './pet'
+import { PATH_LINE, STAGES, TRAIT } from './pet'
 import { WEATHER_LABEL } from './weather'
+import { daysToNext, stageFor } from './world'
 
-export const DEFAULT_SETTINGS: PetSettings = { caption: true, weather: true, plays: true }
+export const DEFAULT_SETTINGS: PetSettings = { caption: true, weather: true, plays: true, longing: true, world: true, seasons: true }
 
 const bar = (v: number) => {
   const full = Math.round(v / 10)
@@ -32,9 +33,13 @@ export const albumLine = (a: AlbumEntry) => {
 
 /** A plain-text card of everything about the pet, for /pet-stats. */
 export const statsText = (p: Pet, l: Live | null, w: Weather | null, album: readonly AlbumEntry[], s: PetSettings, now: number) => {
-  const stage = stageOf(p.xp)
+  const stage = stageFor(p, now, s.longing)
   const nextStage = STAGES[stage + 1]
-  const xpLine = nextStage === undefined ? `${Math.floor(p.xp)} xp · top stage` : `${Math.floor(p.xp)} / ${nextStage.xp} xp → ${nextStage.name}`
+  const wait = s.longing ? daysToNext(p, now) : null
+  const xpLine =
+    nextStage === undefined ? `${Math.floor(p.xp)} xp · top stage`
+    : wait !== null && p.xp >= nextStage.xp ? `${Math.floor(p.xp)} xp · ${nextStage.name} in ${wait} ${wait === 1 ? 'day' : 'days'}`
+    : `${Math.floor(p.xp)} / ${nextStage.xp} xp → ${nextStage.name}`
   const { shell: commands, edit: edits, explore: explores } = p.tally
   const calling = p.path === null ? (stage >= 3 ? 'none yet' : 'decided at Teen') : PATH_LINE[p.path]
   const lines = [
@@ -48,10 +53,10 @@ export const statsText = (p: Pet, l: Live | null, w: Weather | null, album: read
     `energy ${bar(p.energy)} ${Math.round(p.energy)}`,
     `joy    ${bar(p.joy)} ${Math.round(p.joy)}`,
     '',
-    `age ${age(p.born, now)} · ${p.sessions} sessions · ${p.turns} turns · ${p.errors} tool errors`,
+    `age ${age(p.born, now)} · ${p.days ?? 0} days together · ${p.sessions} sessions · ${p.turns} turns · ${p.errors} tool errors`,
     ...(l === null ? [] : [`this session: ${l.sessionTurns} turns, ${l.sessionErrors} errors`]),
     `weather: ${!s.weather ? 'off' : w === null ? 'not fetched yet' : `${w.temp > 0 ? '+' : ''}${w.temp}° ${WEATHER_LABEL[w.kind]}${w.city === '' ? '' : `, ${w.city}`}`}`,
-    `settings: caption ${s.caption ? 'on' : 'off'} · weather ${s.weather ? 'on' : 'off'} · plays ${s.plays ? 'on' : 'off'}`,
+    `settings: ${(Object.keys(DEFAULT_SETTINGS) as (keyof PetSettings)[]).map(k => `${k} ${s[k] ? 'on' : 'off'}`).join(' · ')}`,
   ]
   if (album.length > 0) {
     lines.push('', 'album:')

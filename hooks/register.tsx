@@ -29,6 +29,7 @@ import {
 } from './pet'
 import { BAND_H, SKINS, bandSvg, portraitSvg } from './svg'
 import { isSameView, isStaying, sceneOf, viewOf } from './view'
+import { countDay, stageFor } from './world'
 import { kindOf, weatherJoy } from './weather'
 
 /*
@@ -114,7 +115,7 @@ const refresh = async ($: EngineInterface) => {
   const w = await read($, weather)
   const before = (await read($, stroll)) ?? newStroll(now)
   const s = await read($, settings)
-  const st = stepStroll(before, now, !s.plays || isStaying(sceneOf(p, l, before, w, now)), p.trait)
+  const st = stepStroll(before, now, !s.plays || isStaying(sceneOf(p, l, before, w, now, s.longing)), p.trait)
   if (st !== before) await update($, stroll, () => st)
   const due = st.isActive ? st.startedAt + st.durMs + SETTLE_MS : st.nextAt
   if (due > now && wake?.at !== due) {
@@ -185,8 +186,9 @@ const tick = async ($: EngineInterface) => {
   }
   if (isDormant) return
   if (l.play !== null && l.playUntil <= now) await setLive($, x => ({ ...x, play: null }))
-  const scene = sceneOf(p, l, (await read($, stroll)) ?? newStroll(now), w, now)
-  if ((await read($, settings)).plays && l.play === null && now >= l.nextPlayAt && scene.mood === 'idle') {
+  const s = await read($, settings)
+  const scene = sceneOf(p, l, (await read($, stroll)) ?? newStroll(now), w, now, s.longing)
+  if (s.plays && l.play === null && now >= l.nextPlayAt && scene.mood === 'idle') {
     const play = choosePlay(w, new Date(now).getHours())
     const gap = TRAIT[p.trait].playEveryS * 1000 * (0.7 + Math.random() * 0.6)
     await setLive($, x => ({ ...x, play, playUntil: now + PLAY_MS, nextPlayAt: now + PLAY_MS + gap }))
@@ -218,7 +220,7 @@ const refreshWeather = async ($: EngineInterface) => {
     )
     if (!res.ok) return
     const cur = (JSON.parse(res.text) as { current: { temperature_2m: number; weather_code: number; is_day: number; wind_speed_10m: number } }).current
-    const next: Weather = { kind: kindOf(cur.weather_code), temp: Math.round(cur.temperature_2m), isDay: cur.is_day === 1, wind: cur.wind_speed_10m, city: place.city, at: now }
+    const next: Weather = { kind: kindOf(cur.weather_code), temp: Math.round(cur.temperature_2m), isDay: cur.is_day === 1, wind: cur.wind_speed_10m, city: place.city, at: now, lat: place.lat }
     await update($, weather, () => next)
     await refresh($)
   } catch {
@@ -239,6 +241,9 @@ const SWITCHES = [
   ['pet-caption', 'caption', 'Show the weather and mood caption on the band (on|off)'],
   ['pet-weather', 'weather', 'Use the real weather where you are, or a calm sky (on|off)'],
   ['pet-plays', 'plays', 'Let the pet stroll and play, or keep it calmly in place (on|off)'],
+  ['pet-longing', 'longing', 'Grow slowly with the calendar: Legend after a year together (on|off)'],
+  ['pet-world', 'world', 'Let a home and a garden grow on the band over the days you work (on|off)'],
+  ['pet-seasons', 'seasons', 'Seasons on the tree and garden, and a small piece on holidays (on|off)'],
 ] as const
 
 const setSetting = async ($: EngineInterface, setting: keyof PetSettings, value: boolean) => {
@@ -296,7 +301,7 @@ const hatch = async ($: EngineInterface) => {
   const old = await read($, pet)
   const album = ((await $.store.get('album')) as AlbumEntry[] | undefined) ?? []
   if (old !== null) {
-    album.push({ name: old.name, trait: old.trait, hue: old.hue, stage: STAGES[stageOf(old.xp)]!.name, path: old.path, turns: old.turns, born: old.born, retired: now })
+    album.push({ name: old.name, trait: old.trait, hue: old.hue, stage: STAGES[stageFor(old, now, (await read($, settings)).longing)]!.name, path: old.path, turns: old.turns, born: old.born, retired: now })
     await $.store.set('album', album)
   }
   const egg = { ...newPet(now, Math.random, album.map(a => a.name)), sessions: 1 }
@@ -310,7 +315,7 @@ const hatch = async ($: EngineInterface) => {
 const checkPath = async ($: EngineInterface) => {
   const p = await read($, pet)
   if (p === null) return
-  const settled = settlePath(p)
+  const settled = settlePath(p, stageFor(p, await $.clock.now(), (await read($, settings)).longing))
   if (!settled.isNew) return
   await setPet($, () => settled.pet)
   const job = String(settled.pet.path)
@@ -453,13 +458,15 @@ export const register: Register = on => {
       return done
     }
     const before = (await read($, pet)) ?? newPet(now)
-    const result = finishTurn(before, toolsThisTurn, done.usage?.output_tokens ?? 0)
+    const finished = finishTurn(countDay(before, now), toolsThisTurn, done.usage?.output_tokens ?? 0)
+    // A stage can open by work or, under longing, by age: announce it on the first turn that sees it.
+    const stageIndex = stageFor(finished.pet, now, (await read($, settings)).longing)
+    const result = { pet: { ...finished.pet, stage: stageIndex }, isEvolved: stageIndex > (finished.pet.stage ?? stageIndex) }
     await setPet($, () => result.pet)
     const l = await read($, live)
     await setLive($, x => ({ ...x, sessionTurns: x.sessionTurns + 1 }))
     await checkPath($)
     if (result.isEvolved) {
-      const stageIndex = stageOf(result.pet.xp)
       $.ui.toast(stageIndex === 1 ? `${result.pet.name} hatched!` : `${result.pet.name} evolved into ${STAGES[stageIndex]!.name}!`, { timeoutMs: 6000 })
       await flash($, 'party', 6000)
     } else if (l !== null && !result.pet.golden && l.sessionTurns + 1 >= GOLDEN_TURNS && l.sessionErrors === 0) {
@@ -547,7 +554,7 @@ export const register: Register = on => {
     const isHidden = await read($, hidden)
     const confirmHatch = (await read($, pane)).confirmHatch
     const album = ((await $.store.get('album')) as AlbumEntry[] | undefined) ?? []
-    const scene = sceneOf(p, l, (await read($, stroll)) ?? newStroll(now), s.weather ? w : null, now)
+    const scene = sceneOf(p, l, (await read($, stroll)) ?? newStroll(now), s.weather ? w : null, now, s.longing)
     const [title = '', ...info] = statsText(p, l, w, [], s, now).split('\n')
     const toggle = (setting: keyof PetSettings) => (
       <Button key={`set-${setting}`} onPress={() => setSetting($, setting, !s[setting])}>
@@ -631,6 +638,9 @@ export const register: Register = on => {
             {toggle('caption')}
             {toggle('weather')}
             {toggle('plays')}
+            {toggle('longing')}
+            {toggle('world')}
+            {toggle('seasons')}
           </Box>
         </Box>
         {album.length > 0 && (

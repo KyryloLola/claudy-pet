@@ -1,4 +1,4 @@
-import type { BandScene, Mood, WeatherKind } from '../types'
+import type { BandScene, Mood, WeatherKind, WorldScene } from '../types'
 import { BODY, tint } from './svg'
 
 /**
@@ -137,6 +137,35 @@ const toRuns = (px: Px[][], chars: Cell[][], width: number): Run[][] =>
 
 const grid = <T>(rows: number, width: number) => Array.from({ length: rows }, () => Array<T | null>(width).fill(null))
 
+/** The slow modules as small pixel sprites, each sitting on the grass: home, holiday piece, garden, balloon. */
+const WORLD_PALETTE: Record<string, string> = {
+  R: '#c4553d', W: '#e9d2a8', Y: '#ffd86b', U: '#9fc7e6', T: '#8a5d31', w: '#ffffff', o: '#f07f1f', g: '#4f7a32',
+  p: '#ff7aa2', y: '#ffd34d', v: '#c7a0ff', f: '#c9a46a', c: '#5bd17a', F: '#2f7a46', h: '#ff6b8a', k: '#f6d7c3', s: '#9aa3ad',
+}
+const HOMES: Record<Exclude<WorldScene['home'], 'none'>, (isLit: boolean, isSnowy: boolean) => string[]> = {
+  bench: () => ['TTTTTT', 'T....T'],
+  frame: () => ['...T....', '..T.T...', '.T...T..', '.T...T..', '.TTTTT..'],
+  cottage: (isLit, isSnowy) => [isSnowy ? '...ww...' : '...RR...', isSnowy ? '..wwww..' : '..RRRR..', '.RRRRRR.', `.W${isLit ? 'Y' : 'U'}WWTW.`, '.WWWWTW.'],
+}
+const HOLIDAYS: Record<NonNullable<WorldScene['holiday']>, string[]> = {
+  newyear: ['.F.', 'FyF', 'FFF', '.T.'],
+  xmas: ['.y.', '.F.', 'FpF', 'FFF', '.T.'],
+  valentine: ['h.h', 'hhh', '.h.'],
+  earth: ['c.c', '.c.', '.g.'],
+  halloween: ['.g.', 'ooo', 'ooo'],
+  birthday: ['.y.', 'kpk', 'kkk'],
+}
+const SEASON_GRASS: Partial<Record<NonNullable<WorldScene['season']>, [string, string]>> = { autumn: ['#c9b458', '#a8923e'], winter: ['#dfe6ee', '#b9c4d6'] }
+
+const putWorld = (px: Px[][], o: WorldScene, zone: number, isNight: boolean, isSnowing: boolean) => {
+  const sit = (rows: string[], x: number) => put(px, rows, x, PX_H - 1 - rows.length, WORLD_PALETTE)
+  const isWinter = o.season === 'winter' || isSnowing
+  if (o.home !== 'none') sit(HOMES[o.home](isNight, isWinter), 1)
+  if (o.holiday !== null) sit(HOLIDAYS[o.holiday], 11)
+  if (o.garden !== 'none' && !isWinter && zone - 8 > 16) sit([o.season === 'autumn' ? 'f.f.f' : o.garden === 'bed' ? 'p.y.v' : '..y..', o.garden === 'bed' ? 'c.c.c' : '..c..'], zone - 8)
+  if (o.balloon) put(px, ['pp', 'pp', '.s', '.s', '.s'], 8, 0, { p: '#ff7aa2', s: '#9aa3ad' })
+}
+
 const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
 
 /** Where the pet stands along the band, 0 to 1, at `now`. */
@@ -195,11 +224,13 @@ export const asciiBand = (o: BandScene, width: number, now: number): Run[][] | n
     }
   }
 
-  // Grass along the bottom.
+  // Grass along the bottom, turned by the season when that module is on.
+  const [grass, grassDark] = (o.world?.season ? SEASON_GRASS[o.world.season] : undefined) ?? [GRASS, GRASS_DARK]
   for (let c = 0; c < W; c++) {
-    px[PX_H - 1]![c] = c % 3 === 0 ? GRASS_DARK : GRASS
-    if ((c * 7) % 5 === 1) px[PX_H - 2]![c] = GRASS
+    px[PX_H - 1]![c] = c % 3 === 0 ? grassDark : grass
+    if ((c * 7) % 5 === 1) px[PX_H - 2]![c] = grass
   }
+  if (o.world !== null && isWide) putWorld(px, o.world, zone, w !== null && !w.isDay, w?.kind === 'snow')
 
   // The pet, where its stroll has it now, never in the caption's zone.
   const x = Math.round(strideAt(o.stride, now) * Math.max(0, Math.min(zone, W) - PET_ROOM))

@@ -14,7 +14,7 @@ export type Tally = { shell: number; edit: number; explore: number }
 export type WeatherKind = 'clear' | 'partly' | 'cloudy' | 'fog' | 'drizzle' | 'rain' | 'snow' | 'storm'
 
 /** Current weather where the person roughly is, from their IP. */
-export type Weather = { kind: WeatherKind; temp: number; isDay: boolean; wind: number; city: string; at: number }
+export type Weather = { kind: WeatherKind; temp: number; isDay: boolean; wind: number; city: string; at: number; lat?: number }
 
 /**
  * GLOBAL, in the plugin store, shared by every session and surface:
@@ -38,6 +38,11 @@ export type Pet = {
   tally: Tally
   /** A chosen body colour (a skin), or null for the stage colours turned by `hue`. */
   skin?: string | null
+  /** The last stage announced, so a stage reached by age alone still gets its moment. */
+  stage?: number
+  /** Days on which a turn finished, and the last of them: the world grows by these. */
+  days?: number
+  lastDay?: string
 }
 
 export type AlbumEntry = { name: string; trait: Trait; hue: number; stage: string; path: Path | null; turns: number; born: number; retired: number }
@@ -61,6 +66,18 @@ export type Live = {
 /** Where the pet rests along the band (0 left wall, 1 right wall) and its current or last stroll. */
 export type Stroll = { x: number; from: number; to: number; startedAt: number; durMs: number; facing: 1 | -1; nextAt: number; isActive: boolean }
 
+export type Season = 'spring' | 'summer' | 'autumn' | 'winter'
+export type Holiday = 'newyear' | 'valentine' | 'earth' | 'halloween' | 'xmas' | 'birthday'
+
+/** The slow modules on the band: one home by the tree, one garden by the bush, a season, a holiday. */
+export type WorldScene = {
+  home: 'none' | 'bench' | 'frame' | 'cottage'
+  garden: 'none' | 'sprouts' | 'bed'
+  season: Season | null
+  holiday: Holiday | null
+  balloon: boolean
+}
+
 /** DERIVED: everything a band picture shows. It changes only when something visible changes. */
 export type BandScene = {
   stage: number
@@ -71,10 +88,11 @@ export type BandScene = {
   weather: Weather | null
   caption: string[]
   stride: { from: number; to: number; startedAt: number; durMs: number; facing: 1 | -1 }
+  world: WorldScene | null
 }
 
 /** GLOBAL settings, in the plugin store: what the band shows and how lively the pet is. */
-export type PetSettings = { caption: boolean; weather: boolean; plays: boolean }
+export type PetSettings = { caption: boolean; weather: boolean; plays: boolean; longing: boolean; world: boolean; seasons: boolean }
 
 export type BandView = { isHidden: boolean; isTyping: boolean; shownAt: number; name: string; scene: BandScene }
 

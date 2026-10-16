@@ -9,6 +9,7 @@ import { SETTLE_MS, choosePlay, decay, finishTurn, moodOf, newLive, newPet, newS
 import { bandSvg } from './svg'
 import { isSameView, sceneOf, viewOf } from './view'
 import { kindOf, weatherJoy } from './weather'
+import { countDay, daysToNext, holidayOf, isBalloonDay, seasonOf, stageFor, worldOf } from './world'
 
 const calm = (over: Partial<Pet> = {}): Pet => ({ ...newPet(0, () => 0), trait: 'calm', hue: 0, ...over })
 const rainy: Weather = { kind: 'rain', temp: 9, isDay: true, wind: 5, city: 'Kyiv', at: 123 }
@@ -166,7 +167,7 @@ test('settings switch on, off, or flip with no word, and refuse anything else', 
 
 test('the stats card has the stage, needs, calling, settings and album', async () => {
   const p = calm({ name: 'Echo', xp: 442, path: 'engineer', food: 80 })
-  const text = statsText(p, newLive(0), rainy, [{ name: 'Byte', trait: 'sleepy', hue: 0, stage: 'Kid', path: null, turns: 30, born: 0, retired: 1 }], DEFAULT_SETTINGS, 3 * 86_400_000)
+  const text = statsText(p, newLive(0), rainy, [{ name: 'Byte', trait: 'sleepy', hue: 0, stage: 'Kid', path: null, turns: 30, born: 0, retired: 1 }], { ...DEFAULT_SETTINGS, longing: false }, 3 * 86_400_000)
   for (const part of ['Echo · Teen', '442 / 450 xp → Adult', 'calling: engineer', 'food   ▰▰▰▰▰▰▰▰▱▱ 80', 'age 3 d', '+9° rain, Kyiv', 'caption on · weather on · plays on', 'Byte · Kid · sleepy']) {
     expect(text.includes(part)).toBe(true)
   }
@@ -177,7 +178,7 @@ test('settings shape the view: no caption, no weather, no plays', async () => {
   const on = viewOf(calm({ xp: 70 }), false, live, newStroll(0), rainy, 1000, DEFAULT_SETTINGS)
   expect(on.scene.caption.length).toBe(2)
   expect(on.scene.look.play).toBe('sing')
-  const off = viewOf(calm({ xp: 70 }), false, live, newStroll(0), rainy, 1000, { caption: false, weather: false, plays: false })
+  const off = viewOf(calm({ xp: 70 }), false, live, newStroll(0), rainy, 1000, { ...DEFAULT_SETTINGS, caption: false, weather: false, plays: false })
   expect(off.scene.caption).toEqual([])
   expect(off.scene.weather).toBe(null)
   expect(off.scene.look.play).toBe(null)
@@ -222,4 +223,61 @@ test('in a terminal the caption keeps its own zone: no pet pixel, rain or star e
     }
   }
   expect(asciiPortrait(sceneOf(calm({ xp: 70 }), newLive(0), newStroll(0), null, 0), 0).length).toBe(ASCII_ROWS)
+})
+
+const DAY = 86_400_000
+const at = (y: number, m: number, d: number) => new Date(y, m - 1, d, 12).getTime()
+
+test('longing: stages also wait on age, Legend at a year', async () => {
+  const p = calm({ xp: 5000, born: 0 })
+  expect(stageFor(p, 3 * DAY, false)).toBe(5)
+  expect(stageFor(p, 3 * DAY, true)).toBe(1)
+  expect(stageFor(p, 40 * DAY, true)).toBe(3)
+  expect(stageFor(p, 365 * DAY, true)).toBe(5)
+  expect(stageFor(calm({ xp: 5, born: 0 }), 400 * DAY, true)).toBe(0)
+  expect(daysToNext(p, 3 * DAY)).toBe(4)
+})
+
+test('a day together counts once, on its first finished turn', async () => {
+  const once = countDay(calm({ days: 2, lastDay: '' }), at(2026, 3, 10))
+  expect(once.days).toBe(3)
+  expect(countDay(once, at(2026, 3, 10) + 3_600_000).days).toBe(3)
+  expect(countDay(once, at(2026, 3, 11)).days).toBe(4)
+})
+
+test('seasons turn south of the equator; holidays are fixed dates; the birthday waits a year', async () => {
+  expect(seasonOf(at(2026, 4, 10), 50)).toBe('spring')
+  expect(seasonOf(at(2026, 4, 10), -33)).toBe('autumn')
+  expect(seasonOf(at(2026, 12, 10))).toBe('winter')
+  expect(holidayOf(at(2026, 10, 31), 0)).toBe('halloween')
+  expect(holidayOf(at(2026, 12, 25), at(2026, 12, 1))).toBe('xmas')
+  expect(holidayOf(at(2027, 1, 1), at(2026, 12, 1))).toBe('newyear')
+  expect(holidayOf(at(2026, 6, 3), at(2026, 6, 3))).toBe(null)
+  expect(holidayOf(at(2027, 6, 3), at(2026, 6, 3))).toBe('birthday')
+  expect(isBalloonDay(at(2026, 8, 17))).toBe(true)
+  expect(isBalloonDay(at(2026, 8, 18))).toBe(false)
+})
+
+test('the world grows by days together and only shows when its module is on', async () => {
+  const on = { ...DEFAULT_SETTINGS, world: true, seasons: true }
+  expect(worldOf(calm({ days: 0 }), null, at(2026, 7, 1), on)).toEqual({ home: 'none', garden: 'none', season: 'summer', holiday: null, balloon: false })
+  expect(worldOf(calm({ days: 8 }), null, at(2026, 7, 1), on).home).toBe('bench')
+  expect(worldOf(calm({ days: 61 }), null, at(2026, 7, 1), on)).toEqual({ home: 'cottage', garden: 'bed', season: 'summer', holiday: null, balloon: false })
+  expect(worldOf(calm({ days: 61 }), null, at(2026, 7, 1), { ...DEFAULT_SETTINGS, world: false, seasons: false })).toEqual({ home: 'none', garden: 'none', season: null, holiday: null, balloon: false })
+})
+
+test('with every module on, the bands stay clean, light and exactly as wide as asked', async () => {
+  const s = { ...DEFAULT_SETTINGS, world: true, seasons: true }
+  for (const [day, days] of [[at(2026, 10, 31), 61], [at(2026, 12, 25), 35], [at(2026, 8, 17), 9], [at(2026, 4, 22), 15], [at(2027, 1, 1), 70]] as const) {
+    for (const kind of ['clear', 'snow', 'rain'] as const) {
+      const v = viewOf(calm({ xp: 500, days, born: day - 400 * DAY }), false, newLive(0), newStroll(0), { ...rainy, kind, isDay: kind !== 'snow' }, day, s)
+      const svg = bandSvg(v.scene, 800, 1)
+      expect(svg.includes('undefined') || svg.includes('NaN')).toBe(false)
+      // The world adds no animation of its own: the count is the plain scene's.
+      expect((svg.match(/animation/g) ?? []).length).toBe((bandSvg({ ...v.scene, world: null }, 800, 1).match(/animation/g) ?? []).length)
+      for (const width of [20, 40, 80, 160]) {
+        for (const runs of asciiBand(v.scene, width, 0)!) expect([...runs.map(r => r.text).join('')].length).toBe(width)
+      }
+    }
+  }
 })

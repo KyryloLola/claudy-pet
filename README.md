@@ -27,12 +27,24 @@ The CLI gets its own pixel-art band: three rows of half blocks, two pixels to a 
 
 ## What it does
 
-- **Grows** through six stages, Egg → Baby → Kid → Teen → Adult → Legend, from the turns and tools it watches.
+- **Grows** through six stages, Egg → Baby → Kid → Teen → Adult → Legend, from the turns and tools it watches and, slowly, with the calendar: Legend takes a year together.
 - **Has a temperament** picked at hatching (calm, energetic, curious, sleepy) that changes how it walks, naps and reacts.
 - **Takes a calling** at Teen from the work it saw most: engineer (shell), writer (edits) or explorer (reading and searching).
 - **Lives with you**: your prompts feed it, a turn with no tool errors makes it happy, it thinks while Claude thinks, naps when you are away, and only now and then shows that it is hungry or sad.
 - **Plays** on its own every few minutes, picking something that fits the weather and the hour: chasing a butterfly, jumping in puddles, rolling a snowball, watching stars.
 - **Goes golden** after 15 clean turns in one session.
+
+## A year together
+
+Claudy Pet is meant to keep you company for a long time, in the spirit of slow games where real days pass and small things change. Three modules do it, all on by default and each one switched off with a command or in the `/pet-stats` pane:
+
+- **longing**: stages wait on the pet's age as well as its work. Kid at a week, Teen at a month, Adult at three months, Legend after a year.
+- **world**: a home grows by the tree over the days you work together: a bench after a week, the frame of a cottage after a month, the cottage after two, with a light in the window at night. A small garden grows by the bush.
+- **seasons**: blossom in spring, turning leaves and fallen ones in autumn, a dull green in a snowless winter, the hemisphere taken from the rough location the weather already uses (north when weather is off). One small piece on fixed-date holidays: New Year, Valentine's Day, Earth Day, Halloween, Christmas, and the pet's own birthday from its second year.
+
+Each piece has one place and replaces the one before it, so the band stays calm. Nothing new animates: these pieces are drawn still and change at most once a day.
+
+![A year on the band: a bench in spring, a cottage going up in autumn, a pumpkin on Halloween, lights on New Year](docs/world.svg)
 
 ## Commands
 
@@ -47,6 +59,9 @@ The CLI gets its own pixel-art band: three rows of half blocks, two pixels to a 
 | `/pet-caption on\|off` | The weather and mood caption on the band |
 | `/pet-weather on\|off` | Real weather, or a calm sky that follows the time of day |
 | `/pet-plays on\|off` | Strolls and plays, or a pet that stays calmly in place |
+| `/pet-longing on\|off` | Grows with the calendar too, Legend after a year, or by work alone |
+| `/pet-world on\|off` | A home and a garden that grow over the days you work together |
+| `/pet-seasons on\|off` | Seasons on the tree, grass and garden, and a small piece on holidays |
 
 Settings and the pet itself are kept across sessions.
 
@@ -65,6 +80,7 @@ Claudy Pet is written to be easy to audit. Everything it does outside its own co
 - **Your prompt box**, only to tell whether you are typing (so the band can step aside). It looks at whether the text is empty; the text is never stored or sent.
 - **Each submitted prompt and each tool call**, only to count them: a prompt feeds the pet, and a tool call adds to its tally of shell, edit and explore work. It reads the tool's name and whether it failed; never its input or output.
 - **Each finished turn**: whether it ended normally and its output token count, which turn into experience.
+- **The date and time on your computer**, for the pet's age, the days you worked together, the season and holidays.
 - **Its own settings and pet**, in the plugin's own store under your Claude Code configuration directory.
 
 **What it sends, and where**
@@ -98,7 +114,7 @@ See also [PRIVACY.md](PRIVACY.md).
 
 ## How it stays light
 
-The band is one SVG picture whose source only changes when something you can see changes, so the surface keeps it running instead of reloading it; loops are phased to the moment the picture was first drawn. The scene has only a handful of animations, rain and snow move as single sheets, and a session nobody is looking at goes dormant. In a terminal the band redraws once a second, four times a second while the pet walks, and stops as soon as no terminal is drawing it.
+The band is one SVG picture whose source only changes when something you can see changes, so the surface keeps it running instead of reloading it; loops are phased to the moment the picture was first drawn. The scene has only a handful of animations, rain and snow move as single sheets, and a session nobody is looking at goes dormant. In a terminal the band redraws once a second, four times a second while the pet walks, and stops as soon as no terminal is drawing it. The year-together modules add no timer: age, days, season and holiday are read from the date when the band is rebuilt anyway.
 
 ## Develop
 
