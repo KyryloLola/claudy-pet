@@ -49,7 +49,6 @@ export const newPet = (now: number, rand: () => number = Math.random, avoid: rea
   sessions: 0,
   turns: 0,
   errors: 0,
-  golden: false,
   lastSeen: now,
   path: null,
   tally: { shell: 0, edit: 0, explore: 0 },

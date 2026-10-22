@@ -9,7 +9,7 @@ import { SETTLE_MS, choosePlay, decay, finishTurn, moodOf, newLive, newPet, newS
 import { bandSvg } from './svg'
 import { isSameView, sceneOf, viewOf } from './view'
 import { kindOf, weatherJoy } from './weather'
-import { countDay, daysToNext, holidayOf, isBalloonDay, seasonOf, stageFor, worldOf } from './world'
+import { countDay, dayKey, daysToNext, holidayOf, isBalloonDay, isGoldenOn, seasonOf, stageFor, worldOf } from './world'
 
 const calm = (over: Partial<Pet> = {}): Pet => ({ ...newPet(0, () => 0), trait: 'calm', hue: 0, ...over })
 const rainy: Weather = { kind: 'rain', temp: 9, isDay: true, wind: 5, city: 'Kyiv', at: 123 }
@@ -135,7 +135,7 @@ test('a reload of the mod keeps the session as it is; only a new session restore
 })
 
 test('nothing animated also carries its position in a transform, which the animation would override', async () => {
-  const scene = sceneOf(calm({ xp: 300, golden: true }), newLive(0), newStroll(0), rainy, 0)
+  const scene = sceneOf(calm({ xp: 300, goldenDay: dayKey(0) }), newLive(0), newStroll(0), rainy, 0)
   for (const mood of ['loved', 'happy', 'party', 'thinking', 'sleeping'] as const) {
     const svg = bandSvg({ ...scene, mood, golden: true }, 700, 1)
     expect(/<[a-z]+ class="(rise|twinkle|fall|pulse|spin|grow|shrink)"[^>]*transform="translate/.test(svg)).toBe(false)
@@ -280,4 +280,16 @@ test('with every module on, the bands stay clean, light and exactly as wide as a
       }
     }
   }
+})
+
+test('golden lasts the day it is earned, until local midnight', async () => {
+  const noon = new Date(2026, 4, 3, 12).getTime()
+  const p = calm({ goldenDay: dayKey(noon), goldenDays: 1 })
+  expect(isGoldenOn(p, noon)).toBe(true)
+  expect(isGoldenOn(p, new Date(2026, 4, 3, 23, 59).getTime())).toBe(true)
+  expect(isGoldenOn(p, new Date(2026, 4, 4, 0, 1).getTime())).toBe(false)
+  expect(sceneOf(p, newLive(0), newStroll(0), null, noon).golden).toBe(true)
+  expect(sceneOf(p, newLive(0), newStroll(0), null, noon + 86_400_000).golden).toBe(false)
+  expect(statsText(p, null, null, [], DEFAULT_SETTINGS, noon).includes('golden today')).toBe(true)
+  expect(statsText({ ...p, streak: 7 }, null, null, [], DEFAULT_SETTINGS, noon).includes('clean streak: 7 / 25')).toBe(true)
 })

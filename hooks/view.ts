@@ -1,7 +1,7 @@
 import type { BandScene, BandView, Live, Pet, PetSettings, Stroll, Weather } from '../types'
 import { MOOD_SHORT, STAGES, moodOf } from './pet'
 import { WEATHER_LABEL } from './weather'
-import { stageFor, worldOf } from './world'
+import { isGoldenOn, stageFor, worldOf } from './world'
 
 /** Moods in which the pet stays where it is instead of strolling. */
 export const STAYS = ['sleeping', 'eating', 'party', 'loved'] as const
@@ -17,7 +17,7 @@ export const sceneOf = (p: Pet, l: Live, st: Stroll, w: Weather | null, now: num
   return {
     stage,
     mood,
-    golden: p.golden,
+    golden: isGoldenOn(p, now),
     eggXp: stage === 0 ? (p.xp >= 12 ? 12 : p.xp >= 8 ? 8 : 0) : 0,
     look: { hue: p.hue, trait: p.trait, path: p.path, play, skin: p.skin ?? null },
     weather: w === null ? null : { ...w, at: 0 },

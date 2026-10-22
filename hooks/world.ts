@@ -43,6 +43,9 @@ export const dayKey = (now: number) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** Golden is for a day: from the turn it is earned until local midnight. */
+export const isGoldenOn = (p: Pet, now: number) => p.goldenDay === dayKey(now)
+
 /** Counts a day the first time a turn finishes on it. */
 export const countDay = (p: Pet, now: number): Pet => {
   const key = dayKey(now)

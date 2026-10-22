@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { AlbumEntry, BandView, Live, Mood, Pet, PetSettings, Stroll, Weather } from '../types'
 import { openSession } from './lifecycle'
-import { DEFAULT_SETTINGS, albumLine, parseSwitch, statsText } from './stats'
+import { DEFAULT_SETTINGS, GOLDEN_STREAK, albumLine, parseSwitch, statsText } from './stats'
 import { ASCII_MIN, asciiBand, asciiPortrait, isStriding } from './ascii'
 import { layoutOf } from './layout'
 import {
@@ -29,7 +29,7 @@ import {
 } from './pet'
 import { BAND_H, SKINS, bandSvg, portraitSvg } from './svg'
 import { isSameView, isStaying, sceneOf, viewOf } from './view'
-import { countDay, stageFor } from './world'
+import { countDay, dayKey, isGoldenOn, stageFor } from './world'
 import { kindOf, weatherJoy } from './weather'
 
 /*
@@ -63,7 +63,7 @@ const PLAY_MS = 8000
 const TYPING_QUIET_MS = 4000
 const WEATHER_MS = 20 * 60_000
 const PLACE_MS = 12 * 3600_000
-const GOLDEN_TURNS = 15
+const GOLDEN_TURNS = GOLDEN_STREAK
 /** The terminal band redraws itself this often: quicker while the pet walks. */
 const FRAME_MS = 1000
 const WALK_FRAME_MS = 250
@@ -461,17 +461,19 @@ export const register: Register = on => {
     const finished = finishTurn(countDay(before, now), toolsThisTurn, done.usage?.output_tokens ?? 0)
     // A stage can open by work or, under longing, by age: announce it on the first turn that sees it.
     const stageIndex = stageFor(finished.pet, now, (await read($, settings)).longing)
-    const result = { pet: { ...finished.pet, stage: stageIndex }, isEvolved: stageIndex > (finished.pet.stage ?? stageIndex) }
+    // Clean turns in a row, across sessions: a turn with a tool error starts the count again.
+    const streak = errorsThisTurn === 0 ? (finished.pet.streak ?? 0) + 1 : 0
+    const result = { pet: { ...finished.pet, stage: stageIndex, streak }, isEvolved: stageIndex > (finished.pet.stage ?? stageIndex) }
     await setPet($, () => result.pet)
-    const l = await read($, live)
     await setLive($, x => ({ ...x, sessionTurns: x.sessionTurns + 1 }))
     await checkPath($)
     if (result.isEvolved) {
       $.ui.toast(stageIndex === 1 ? `${result.pet.name} hatched!` : `${result.pet.name} evolved into ${STAGES[stageIndex]!.name}!`, { timeoutMs: 6000 })
       await flash($, 'party', 6000)
-    } else if (l !== null && !result.pet.golden && l.sessionTurns + 1 >= GOLDEN_TURNS && l.sessionErrors === 0) {
-      await setPet($, p => ({ ...p, golden: true }))
-      $.ui.toast(`${result.pet.name} turned golden: ${GOLDEN_TURNS} clean turns in a row`, { timeoutMs: 6000 })
+    } else if (!isGoldenOn(result.pet, now) && streak >= GOLDEN_TURNS) {
+      // The streak is spent on the golden day: the next one takes another full run.
+      await setPet($, p => ({ ...p, goldenDay: dayKey(now), goldenDays: (p.goldenDays ?? 0) + 1, streak: 0 }))
+      $.ui.toast(`${result.pet.name} is golden until midnight: ${GOLDEN_TURNS} clean turns in a row`, { timeoutMs: 6000 })
       await flash($, 'party', 6000)
     } else if (errorsThisTurn === 0) {
       // A clean turn: Claude gives the pet a pat.

@@ -30,7 +30,12 @@ export type Pet = {
   sessions: number
   turns: number
   errors: number
-  golden: boolean
+  /** The day it went golden, as a day key: golden only until that day's midnight. */
+  goldenDay?: string
+  /** How many days it has been golden. */
+  goldenDays?: number
+  /** Clean turns in a row, across sessions; a tool error starts it again. */
+  streak?: number
   lastSeen: number
   trait: Trait
   hue: number

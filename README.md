@@ -32,7 +32,7 @@ The CLI gets its own pixel-art band: three rows of half blocks, two pixels to a 
 - **Takes a calling** at Teen from the work it saw most: engineer (shell), writer (edits) or explorer (reading and searching).
 - **Lives with you**: your prompts feed it, a turn with no tool errors makes it happy, it thinks while Claude thinks, naps when you are away, and only now and then shows that it is hungry or sad.
 - **Plays** on its own every few minutes, picking something that fits the weather and the hour: chasing a butterfly, jumping in puddles, rolling a snowball, watching stars.
-- **Goes golden** after 15 clean turns in one session.
+- **Has golden days**: 25 clean turns in a row, counted across sessions, make it golden until midnight. A turn with a tool error starts the count again.
 
 ## A year together
 

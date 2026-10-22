@@ -11,7 +11,7 @@ const engine = (on: (event: 'session.start', hook: (...args: never[]) => unknown
 test('a new session brings the pet back from the store and counts one session', async ($, on) => {
   mock.clock(on, { now: 1_000_000 })
   engine(on as never)
-  const store = new Map<string, unknown>([['pet', { name: 'Echo', xp: 70, food: 50, energy: 50, joy: 50, born: 0, sessions: 4, turns: 9, errors: 0, golden: false, lastSeen: 1_000_000, trait: 'calm', hue: 30, path: null, tally: { shell: 0, edit: 0, explore: 0 } }]])
+  const store = new Map<string, unknown>([['pet', { name: 'Echo', xp: 70, food: 50, energy: 50, joy: 50, born: 0, sessions: 4, turns: 9, errors: 0, lastSeen: 1_000_000, trait: 'calm', hue: 30, path: null, tally: { shell: 0, edit: 0, explore: 0 } }]])
   on('store.get' as never, ((_$: unknown, e: { key: string }) => ({ value: store.get(e.key) })) as never)
   on('store.set' as never, ((_$: unknown, e: { key: string; value: unknown }) => {
     store.set(e.key, e.value)
