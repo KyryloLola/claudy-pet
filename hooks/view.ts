@@ -1,10 +1,13 @@
 import type { BandScene, BandView, Live, Pet, PetSettings, Stroll, Weather } from '../types'
 import { MOOD_SHORT, STAGES, moodOf } from './pet'
-import { WEATHER_LABEL } from './weather'
+import { WEATHER_LABEL, glowOf } from './weather'
 import { isGoldenOn, stageFor, worldOf } from './world'
 
 /** Moods in which the pet stays where it is instead of strolling. */
-export const STAYS = ['sleeping', 'eating', 'party', 'loved'] as const
+export const STAYS = ['sleeping', 'eating', 'party', 'loved', 'listening', 'noting'] as const
+
+/** How long after a pose change the picture still plays the move into it. */
+export const TRANS_MS = 1500
 
 const eggTurnsLeft = (xp: number) => Math.max(1, Math.ceil((STAGES[1].xp - xp) / 3))
 
@@ -20,13 +23,14 @@ export const sceneOf = (p: Pet, l: Live, st: Stroll, w: Weather | null, now: num
     golden: isGoldenOn(p, now),
     eggXp: stage === 0 ? (p.xp >= 12 ? 12 : p.xp >= 8 ? 8 : 0) : 0,
     look: { hue: p.hue, trait: p.trait, path: p.path, play, skin: p.skin ?? null },
-    weather: w === null ? null : { ...w, at: 0 },
+    weather: w === null ? null : { ...w, at: 0, glow: glowOf(w, now) },
     caption: [
       ...(w === null ? [] : [`${w.temp > 0 ? '+' : ''}${w.temp}° ${WEATHER_LABEL[w.kind]}${w.city === '' ? '' : ` · ${w.city}`}`]),
       `${p.name} · ${p.trait} · ${status}`,
     ],
     stride: { from: st.from, to: st.to, startedAt: st.startedAt, durMs: st.durMs, facing: st.facing },
     world: null,
+    trans: l.trans && now - l.trans.at < TRANS_MS ? l.trans : null,
   }
 }
 
@@ -36,7 +40,6 @@ export const viewOf = (p: Pet, hidden: boolean, l: Live, st: Stroll, w: Weather 
   const scene = sceneOf(p, l, st, s.weather ? w : null, now, s.longing)
   return {
     isHidden: hidden,
-    isTyping: l.isTyping,
     shownAt: l.shownAt,
     name: p.name,
     scene: {
@@ -48,7 +51,9 @@ export const viewOf = (p: Pet, hidden: boolean, l: Live, st: Stroll, w: Weather 
   }
 }
 
-export const isSameView = (a: BandView | null, b: BandView) => a !== null && JSON.stringify(a) === JSON.stringify(b)
+/** The move into a pose plays once, from the picture it changed in: its fading alone is no reason to redraw. */
+const settled = (v: BandView) => JSON.stringify({ ...v, scene: { ...v.scene, trans: null } })
+export const isSameView = (a: BandView | null, b: BandView) => a !== null && settled(a) === settled(b)
 
 /** Whether the pet should stay put rather than stroll. */
 export const isStaying = (scene: BandScene) => (STAYS as readonly string[]).includes(scene.mood) || scene.look.play !== null

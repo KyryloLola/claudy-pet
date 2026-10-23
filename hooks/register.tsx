@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { AlbumEntry, BandView, Live, Mood, Pet, PetSettings, Stroll, Weather } from '../types'
 import { openSession } from './lifecycle'
 import { DEFAULT_SETTINGS, GOLDEN_STREAK, albumLine, parseSwitch, statsText } from './stats'
-import { ASCII_MIN, asciiBand, asciiPortrait, isStriding } from './ascii'
+import { ASCII_MIN, asciiBand, asciiPortrait, isStriding, isTransitioning } from './ascii'
 import { layoutOf } from './layout'
 import {
   FACE,
@@ -30,7 +30,7 @@ import {
 import { BAND_H, SKINS, bandSvg, portraitSvg } from './svg'
 import { isSameView, isStaying, sceneOf, viewOf } from './view'
 import { countDay, dayKey, isGoldenOn, stageFor } from './world'
-import { kindOf, weatherJoy } from './weather'
+import { intensityOf, kindOf, localToEpoch, weatherJoy } from './weather'
 
 /*
  * State lives on three levels:
@@ -60,7 +60,10 @@ const UNSEEN_MS = 120_000
 const QUIET_MS = 600_000
 const SAVE_EVERY_MS = 30_000
 const PLAY_MS = 8000
-const TYPING_QUIET_MS = 4000
+/** A draft this long, or this many lines, gets the notepad; it goes away only once the draft is much shorter. */
+const NOTES_FROM = 200
+const NOTES_UNTIL = 120
+const NOTES_LINES = 3
 const WEATHER_MS = 20 * 60_000
 const PLACE_MS = 12 * 3600_000
 const GOLDEN_TURNS = GOLDEN_STREAK
@@ -76,8 +79,6 @@ let lastDecayAt = 0
 /** When the band was last asked to draw: a session nobody is looking at goes dormant. */
 let lastDrawnAt = 0
 let isDormant = false
-let typingTimer: { cancel: () => void } | null = null
-let lastEditAt = 0
 let lastSavedAt = 0
 /** One pending wake-up for the next stroll start or settle, so the slow tick need not run every second. */
 let wake: { at: number; timer: { cancel: () => void } } | null = null
@@ -133,24 +134,25 @@ const flash = async ($: EngineInterface, mood: Mood, ms: number) => {
   $.clock.after(ms + 50, () => void refresh($))
 }
 
-const setTyping = async ($: EngineInterface, isTyping: boolean) => {
-  const l = await read($, live)
-  if (l === null || l.isTyping === isTyping) return
-  const now = await $.clock.now()
-  await setLive($, x => ({ ...x, isTyping, shownAt: isTyping ? x.shownAt : now }))
-  await refresh($)
+type Listen = NonNullable<Live['listen']>
+const POSE: Record<Listen | 'none', Mood> = { look: 'listening', notes: 'noting', none: 'idle' }
+
+/** While you type the pet listens: it looks down at a short draft and takes notes on a long one. */
+const listenFor = (text: string, current: Live['listen']): Live['listen'] => {
+  if (text.trim() === '') return null
+  const lines = text.split('\n').length
+  if (current === 'notes') return text.length < NOTES_UNTIL && lines < NOTES_LINES ? 'look' : 'notes'
+  return text.length >= NOTES_FROM || lines >= NOTES_LINES ? 'notes' : 'look'
 }
 
-/** Shows the band again once typing has been quiet for a while; waits on while keys keep coming. */
-const typingQuiet = async ($: EngineInterface) => {
+const setListen = async ($: EngineInterface, text: string) => {
+  const l = await read($, live)
+  if (l === null) return
+  const next = listenFor(text, l.listen ?? null)
+  if (next === (l.listen ?? null)) return
   const now = await $.clock.now()
-  const left = lastEditAt + TYPING_QUIET_MS - now
-  if (left > 0) {
-    typingTimer = $.clock.after(left, () => void typingQuiet($))
-    return
-  }
-  typingTimer = null
-  await setTyping($, false)
+  await setLive($, x => ({ ...x, listen: next, trans: { from: POSE[x.listen ?? 'none'], at: now }, lastActive: now }))
+  await refresh($)
 }
 
 const setHidden = async ($: EngineInterface, value: boolean) => {
@@ -216,11 +218,28 @@ const refreshWeather = async ($: EngineInterface) => {
     const place = await findPlace($, now)
     if (place === null) return
     const res = await $.http.fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${place.lat}&longitude=${place.lon}&current=temperature_2m,weather_code,is_day,wind_speed_10m`,
+      `https://api.open-meteo.com/v1/forecast?latitude=${place.lat}&longitude=${place.lon}&current=temperature_2m,weather_code,is_day,wind_speed_10m&daily=sunrise,sunset&timezone=auto&forecast_days=1`,
     )
     if (!res.ok) return
-    const cur = (JSON.parse(res.text) as { current: { temperature_2m: number; weather_code: number; is_day: number; wind_speed_10m: number } }).current
-    const next: Weather = { kind: kindOf(cur.weather_code), temp: Math.round(cur.temperature_2m), isDay: cur.is_day === 1, wind: cur.wind_speed_10m, city: place.city, at: now, lat: place.lat }
+    const body = JSON.parse(res.text) as {
+      current: { temperature_2m: number; weather_code: number; is_day: number; wind_speed_10m: number }
+      daily?: { sunrise?: string[]; sunset?: string[] }
+      utc_offset_seconds?: number
+    }
+    const cur = body.current
+    const offset = body.utc_offset_seconds ?? 0
+    const next: Weather = {
+      kind: kindOf(cur.weather_code),
+      intensity: intensityOf(cur.weather_code),
+      temp: Math.round(cur.temperature_2m),
+      isDay: cur.is_day === 1,
+      wind: cur.wind_speed_10m,
+      city: place.city,
+      at: now,
+      lat: place.lat,
+      sunrise: localToEpoch(body.daily?.sunrise?.[0], offset),
+      sunset: localToEpoch(body.daily?.sunset?.[0], offset),
+    }
     await update($, weather, () => next)
     await refresh($)
   } catch {
@@ -332,7 +351,8 @@ const animate = async ($: EngineInterface) => {
   }
   await update($, frame, n => n + 1)
   const v = await read($, view)
-  const ms = v !== null && isStriding(v.scene.stride, now) ? WALK_FRAME_MS : FRAME_MS
+  const isMoving = v !== null && (isStriding(v.scene.stride, now) || isTransitioning(v.scene, now))
+  const ms = isMoving ? WALK_FRAME_MS : FRAME_MS
   $.clock.after(ms, () => void animate($))
 }
 
@@ -416,22 +436,17 @@ export const register: Register = on => {
 
   on('prompt.edit', async ($, e, next) => {
     const box = await next(e)
-    const isTyping = box.text.trim() !== ''
-    lastEditAt = await $.clock.now()
-    await setTyping($, isTyping)
-    // One timer for the whole burst of typing: it looks at the last keystroke instead of being remade on each.
-    if (isTyping && typingTimer === null) typingTimer = $.clock.after(TYPING_QUIET_MS, () => void typingQuiet($))
+    // Only the draft's length and line count are read, to pick the pose; the text is never kept.
+    await setListen($, box.text)
     return box
   })
 
   on('prompt.submit', async ($, e, next) => {
     toolsThisTurn = 0
     errorsThisTurn = 0
-    typingTimer?.cancel()
-    typingTimer = null
     const now = await $.clock.now()
     await setPet($, p => feed(p, 12))
-    await setLive($, l => ({ ...l, isTyping: false, shownAt: l.isTyping ? now : l.shownAt, activity: 'thinking', lastActive: now, play: null }))
+    await setLive($, l => ({ ...l, listen: null, trans: { from: POSE[l.listen ?? 'none'], at: now }, activity: 'thinking', lastActive: now, play: null }))
     await refresh($)
     return next(e)
   })
@@ -461,8 +476,9 @@ export const register: Register = on => {
     const finished = finishTurn(countDay(before, now), toolsThisTurn, done.usage?.output_tokens ?? 0)
     // A stage can open by work or, under longing, by age: announce it on the first turn that sees it.
     const stageIndex = stageFor(finished.pet, now, (await read($, settings)).longing)
-    // Clean turns in a row, across sessions: a turn with a tool error starts the count again.
-    const streak = errorsThisTurn === 0 ? (finished.pet.streak ?? 0) + 1 : 0
+    // Clean working turns in a row, across sessions: a turn with a tool error starts the count again,
+    // and a turn that only talks, with no tool at all, neither counts nor breaks it.
+    const streak = errorsThisTurn > 0 ? 0 : (finished.pet.streak ?? 0) + (toolsThisTurn > 0 ? 1 : 0)
     const result = { pet: { ...finished.pet, stage: stageIndex, streak }, isEvolved: stageIndex > (finished.pet.stage ?? stageIndex) }
     await setPet($, () => result.pet)
     await setLive($, x => ({ ...x, sessionTurns: x.sessionTurns + 1 }))
@@ -473,7 +489,7 @@ export const register: Register = on => {
     } else if (!isGoldenOn(result.pet, now) && streak >= GOLDEN_TURNS) {
       // The streak is spent on the golden day: the next one takes another full run.
       await setPet($, p => ({ ...p, goldenDay: dayKey(now), goldenDays: (p.goldenDays ?? 0) + 1, streak: 0 }))
-      $.ui.toast(`${result.pet.name} is golden until midnight: ${GOLDEN_TURNS} clean turns in a row`, { timeoutMs: 6000 })
+      $.ui.toast(`${result.pet.name} is golden until midnight: ${GOLDEN_TURNS} clean working turns in a row`, { timeoutMs: 6000 })
       await flash($, 'party', 6000)
     } else if (errorsThisTurn === 0) {
       // A clean turn: Claude gives the pet a pat.
@@ -494,14 +510,13 @@ export const register: Register = on => {
     }
     const v = await read($, view)
     if (e.props.hasSurvey || v === null) return next(e)
-    if (v.isTyping && !e.props.isWorking) return next(e)
 
     const els = $.ui.resolve(e)
     const { Text } = els
     const hasSvg = 'Svg' in els
     if (v.isHidden) return next(e)
 
-    const layout = layoutOf(e.surface, e.props.bodyColumns, hasSvg, lastWidth[e.surface])
+    const layout = layoutOf(e.surface, e.props.bodyColumns, hasSvg, lastWidth[e.surface], e.viewport?.columns)
     if (layout.kind === 'scene') lastWidth[e.surface] = layout.width
     if (layout.kind === 'text' || !hasSvg) {
       const line = <Text wrap="truncate">{`${FACE[v.scene.mood]} ${v.scene.caption.join(' · ')}`}</Text>

@@ -3,8 +3,8 @@ import { PATH_LINE, STAGES, TRAIT } from './pet'
 import { WEATHER_LABEL } from './weather'
 import { daysToNext, isGoldenOn, stageFor } from './world'
 
-/** Clean turns in a row that make a golden day. */
-export const GOLDEN_STREAK = 25
+/** Clean working turns in a row (with tools, no tool errors) that make a golden day. */
+export const GOLDEN_STREAK = 60
 
 export const DEFAULT_SETTINGS: PetSettings = { caption: true, weather: true, plays: true, longing: true, world: true, seasons: true }
 
@@ -58,7 +58,7 @@ export const statsText = (p: Pet, l: Live | null, w: Weather | null, album: read
     '',
     `age ${age(p.born, now)} · ${p.days ?? 0} days together · ${p.goldenDays ?? 0} golden · ${p.sessions} sessions · ${p.turns} turns · ${p.errors} tool errors`,
     ...(l === null ? [] : [`this session: ${l.sessionTurns} turns, ${l.sessionErrors} errors`]),
-    `clean streak: ${p.streak ?? 0} / ${GOLDEN_STREAK} for a golden day`,
+    `clean streak: ${p.streak ?? 0} / ${GOLDEN_STREAK} working turns for a golden day`,
     `weather: ${!s.weather ? 'off' : w === null ? 'not fetched yet' : `${w.temp > 0 ? '+' : ''}${w.temp}° ${WEATHER_LABEL[w.kind]}${w.city === '' ? '' : `, ${w.city}`}`}`,
     `settings: ${(Object.keys(DEFAULT_SETTINGS) as (keyof PetSettings)[]).map(k => `${k} ${s[k] ? 'on' : 'off'}`).join(' · ')}`,
   ]

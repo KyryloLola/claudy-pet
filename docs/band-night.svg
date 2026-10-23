@@ -49,6 +49,13 @@
   @keyframes shrink { 0% { transform: scale(1); } 90% { transform: scale(.2); opacity: 1; } 100% { transform: scale(.2); opacity: 0; } }
   @keyframes twinkle { 0%,100% { transform: scale(.4); opacity: .3; } 50% { transform: scale(1); opacity: 1; } }
   @keyframes confetti { 0% { transform: translateY(-20px) rotate(0); } 100% { transform: translateY(210px) rotate(540deg); } }
+  .pupil-move { animation: pupil-move .45s ease-out both; }
+  .note-in { animation: note-in .45s ease-out both; }
+  .note-out { animation: note-out .45s ease-in both; }
+  .pop { transform-box: fill-box; transform-origin: 20% 100%; animation: pop .35s ease-out both; }
+  @keyframes note-in { from { transform: translateY(30px); opacity: 0; } }
+  @keyframes note-out { to { transform: translateY(30px); opacity: 0; } }
+  @keyframes pop { from { transform: scale(.3); opacity: 0; } }
 </style>
     <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe680"/><stop offset="1" stop-color="#ffb300"/></linearGradient>
   </defs>
@@ -62,7 +69,7 @@
     .sway { animation: sway 3.2s ease-in-out infinite; animation-delay: 0.00s; }
     .sheet { animation: sheet 1s linear infinite; }
     .flash { opacity: 0; animation: flash 7s linear infinite; }
-    @keyframes stroll { from { transform: translateX(481.8px); } to { transform: translateX(481.8px); } }
+    @keyframes stroll { from { transform: translateX(294.4px); } to { transform: translateX(294.4px); } }
     @keyframes hover { from { transform: translateX(-6px); } to { transform: translateX(6px); } }
     @keyframes sway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
     @keyframes sheet { from { transform: translateY(0); } to { transform: translateY(74px); } }
@@ -82,19 +89,21 @@
     
     
   </g></g>
-    <g transform="translate(481.8 0)"><g >
-      <g transform="translate(0 1) scale(0.36)"><ellipse cx="120" cy="182" rx="42.32" ry="7" fill="#000" opacity=".12"/>
-  <g class="slow"><g transform="translate(120 132) scale(0.92)"><g class="bob">
+    
+    <g transform="translate(294.4 0)"><g >
+      <g transform="translate(0 1) scale(0.36)"><ellipse cx="120" cy="182" rx="48.760000000000005" ry="7" fill="#000" opacity=".12"/>
+  <g class="slow"><g transform="translate(120 128.88) scale(1.06)"><g class="bob">
     <ellipse cx="-22" cy="46" rx="12" ry="6" fill="#c7a0ff" stroke="#2b2f36" stroke-width="2"/>
     <ellipse cx="22" cy="46" rx="12" ry="6" fill="#c7a0ff" stroke="#2b2f36" stroke-width="2"/>
     <path d="M0 -48 C34 -48 54 -22 54 8 C54 36 32 48 0 48 C-32 48 -54 36 -54 8 C-54 -22 -34 -48 0 -48 Z"
       fill="#c7a0ff" stroke="#2b2f36" stroke-width="3"/>
     <ellipse cx="0" cy="26" rx="28" ry="16" fill="#fff" opacity=".35"/>
-    <g class="wobble"><path class="stroke" d="M0 -46 Q4 -58 0 -68"/><circle cx="0" cy="-71" r="5" fill="#ff6b8a"/></g>
+    <g class="wobble"><path class="stroke" d="M0 -46 Q4 -58 0 -68"/><circle cx="0" cy="-71" r="5" fill="#ff6b8a"/></g><path d="M-34 -36 L-40 -54 L-24 -42 Z M34 -36 L40 -54 L24 -42 Z" fill="#2b2f36" opacity=".75"/><path d="M-20 -50 L-20 -66 L-10 -57 L0 -70 L10 -57 L20 -66 L20 -50 Z" fill="#ffc83d" stroke="#b8860b" stroke-width="2"/>
     <circle cx="-34" cy="8" r="6" fill="#ff8fa3" opacity=".55"/>
     <circle cx="34" cy="8" r="6" fill="#ff8fa3" opacity=".55"/>
     <path class="stroke" d="M-26 -8 Q-18 -2 -10 -8 M10 -8 Q18 -2 26 -8"/>
     <ellipse cx="0" cy="18" rx="4" ry="3" fill="#7a2f3a"/>
+    
     
 </g></g></g>
   

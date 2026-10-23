@@ -74,7 +74,8 @@ export const newLive = (now: number): Live => ({
   lastActive: now,
   sessionTurns: 0,
   sessionErrors: 0,
-  isTyping: false,
+  listen: null,
+  trans: null,
   shownAt: now,
   play: null,
   playUntil: 0,
@@ -126,6 +127,8 @@ export const finishTurn = (pet: Pet, tools: number, outputTokens: number) => {
 export const moodOf = (pet: Pet, live: Live, now: number): Mood => {
   if (live.flash !== null && live.flashUntil > now) return live.flash
   if (live.activity === 'thinking') return 'thinking'
+  if (live.listen === 'notes') return 'noting'
+  if (live.listen === 'look') return 'listening'
   if (now - live.lastActive > TRAIT[pet.trait].sleepAfterMin * MINUTE || pet.energy < 15) return 'sleeping'
   // Needs show only now and then: ten seconds in every two minutes, not all the time.
   const isNagging = now % NAG_EVERY < NAG_FOR
@@ -144,6 +147,8 @@ export const MOOD_SHORT: Record<Mood, string> = {
   happy: 'happy',
   party: 'evolved!',
   loved: 'loved ♥',
+  listening: 'listening',
+  noting: 'taking notes',
 }
 
 export const FACE: Record<Mood, string> = {
@@ -156,6 +161,8 @@ export const FACE: Record<Mood, string> = {
   happy: '(^‿^)',
   party: '\\(^o^)/',
   loved: '(♥‿♥)',
+  listening: '(•ᴗ•)',
+  noting: '(•ᴗ•)_',
 }
 
 /** Which kind of work a tool call is, for the pet's tally and what it carries. */

@@ -59,8 +59,10 @@ const shade = (hex: string, by: number) => {
   return `#${hex2(((n >> 16) & 255) * by)}${hex2(((n >> 8) & 255) * by)}${hex2((n & 255) * by)}`
 }
 
-const EYES: Record<'open' | 'up' | 'shut' | 'smile' | 'brow', [string, string]> = {
+const EYES: Record<'open' | 'up' | 'down' | 'shut' | 'smile' | 'brow', [string, string]> = {
   open: ['.BBBBBBBB.', 'BWKBBBBWKB'],
+  // Pupils in the inner corners: looking down in front of itself, at the prompt.
+  down: ['.BBBBBBBB.', 'BWKBBBBKWB'],
   up: ['.BKBBBBKB.', 'BWWBBBBWWB'],
   shut: ['.BBBBBBBB.', 'BKKBBBBKKB'],
   smile: ['.BKBBBBKB.', 'BKBKBBKBKB'],
@@ -72,10 +74,11 @@ const MOUTHS = { small: 'BRBBKKBBRB', wide: 'BRBMMMMBRB', open: 'BRBBMMBBRB', no
 const EGG_ROWS = ['...EEEE...', '..EEEEEE..', '.EESEEEEE.', '.EEEEESEE.', '.EESEEEEE.', '..EEEEEE..']
 
 /** The sprite for a mood, facing right; `beat` ticks every second for blinking and chewing. */
-const creature = (mood: Mood, beat: number) => {
+const creature = (mood: Mood, beat: number, isBlinking = false) => {
   const isGlad = mood === 'happy' || mood === 'party' || mood === 'loved'
   const eyes =
-    mood === 'sleeping' ? EYES.shut
+    mood === 'sleeping' || isBlinking ? EYES.shut
+    : mood === 'listening' || mood === 'noting' ? EYES.down
     : isGlad ? EYES.smile
     : mood === 'sad' ? EYES.brow
     : mood === 'thinking' ? EYES.up
@@ -95,10 +98,10 @@ const eggSprite = (eggXp: number) =>
   eggXp >= 8 ? EGG_ROWS.map((r, i) => (i === 1 ? '..EEKEEE..' : i === 2 ? '.EESKKEEE.' : r)) : EGG_ROWS
 
 /** The pet's own sprite rows and palette, facing right or left. */
-const petSprite = (o: BandScene, beat: number, facing: number): { rows: string[]; palette: Record<string, string> } => {
+const petSprite = (o: BandScene, beat: number, facing: number, isBlinking = false): { rows: string[]; palette: Record<string, string> } => {
   if (o.stage === 0) return { rows: eggSprite(o.eggXp), palette: { E: EGG, S: EGG_SPOT, K: INK } }
   const body = o.golden ? GOLD : toHex(o.look.skin ?? tint(BODY[o.stage]!, o.look.hue))
-  const sprite = creature(o.mood, beat)
+  const sprite = creature(o.mood, beat, isBlinking)
   return {
     rows: facing < 0 ? sprite.map(r => [...r].reverse().join('')) : sprite,
     palette: { B: body, D: shade(body, 0.75), W: WHITE, K: INK, R: BLUSH, M: MOUTH },
@@ -174,6 +177,17 @@ export const strideAt = (s: BandScene['stride'], now: number) =>
 
 export const isStriding = (s: BandScene['stride'], now: number) => s.durMs > 0 && now >= s.startedAt && now < s.startedAt + s.durMs
 
+/** A pose change plays over a few quick frames: the terminal redraws faster while it lasts. */
+const TRANS_FRAME_MS = 250
+export const isTransitioning = (o: BandScene, now: number) => o.trans !== null && now - o.trans.at < 4 * TRANS_FRAME_MS
+
+/** How many rows of the notepad show, as it comes up from the grass or goes back down. */
+const notepadRows = (o: BandScene, now: number) => {
+  const step = o.trans === null ? 3 : Math.floor((now - o.trans.at) / TRANS_FRAME_MS)
+  if (o.mood === 'noting') return o.trans === null || o.trans.from === 'noting' ? 3 : Math.min(3, step + 1)
+  return o.trans?.from === 'noting' ? Math.max(0, 2 - step) : 0
+}
+
 const CLOUDY: WeatherKind[] = ['partly', 'cloudy', 'fog', 'drizzle', 'rain', 'snow', 'storm']
 const RAIN_EVERY: Partial<Record<WeatherKind, number>> = { drizzle: 9, rain: 5, storm: 3 }
 
@@ -214,9 +228,11 @@ export const asciiBand = (o: BandScene, width: number, now: number): Run[][] | n
     }
     for (let c = 0; c < W; c++) {
       const row = (n: number) => (c >= zone ? 0 : n % 2)
-      const every = RAIN_EVERY[w.kind]
-      if (every !== undefined && (c * 7 + beat) % every === 0) chars[row(c + beat)]![c] = { ch: '╵', color: RAIN }
-      if (w.kind === 'snow' && (c * 5 + beat) % 8 === 0) chars[row(c + (beat >> 1))]![c] = { ch: (c + beat) % 3 === 0 ? '*' : '·', color: SNOW }
+      const base = RAIN_EVERY[w.kind]
+      const every = base === undefined ? undefined : Math.max(2, Math.round(base * { 1: 1.6, 2: 1, 3: 0.6 }[w.intensity ?? 2]))
+      // 11 shares no factor with any spacing, so every spacing gives drops in every frame.
+      if (every !== undefined && (c * 11 + beat) % every === 0) chars[row(c + beat)]![c] = { ch: '╵', color: RAIN }
+      if (w.kind === 'snow' && (c * 11 + beat) % Math.round(8 * { 1: 1.6, 2: 1, 3: 0.6 }[w.intensity ?? 2]) === 0) chars[row(c + (beat >> 1))]![c] = { ch: (c + beat) % 3 === 0 ? '*' : '·', color: SNOW }
       if (w.kind === 'fog' && (c + beat) % 6 === 0) chars[row(c)]![c] = { ch: '~', color: DIM }
       if (!w.isDay && (w.kind === 'clear' || w.kind === 'partly') && (c * 13) % 11 === 0) {
         chars[row(c)]![c] = { ch: (c + beat) % 5 === 0 ? '*' : '·', color: STAR }
@@ -234,8 +250,13 @@ export const asciiBand = (o: BandScene, width: number, now: number): Run[][] | n
 
   // The pet, where its stroll has it now, never in the caption's zone.
   const x = Math.round(strideAt(o.stride, now) * Math.max(0, Math.min(zone, W) - PET_ROOM))
-  const { rows, palette } = petSprite(o, beat, o.stride.facing)
+  // Starting to listen, the pet blinks once before it looks down.
+  const isListening = o.mood === 'listening' || o.mood === 'noting'
+  const isBlinking = isListening && o.trans !== null && o.trans.from !== 'listening' && o.trans.from !== 'noting' && now - o.trans.at < TRANS_FRAME_MS
+  const { rows, palette } = petSprite(o, beat, o.stride.facing, isBlinking)
   put(px, rows, x, 0, palette)
+  const pad = o.stage > 0 ? notepadRows(o, now) : 0
+  if (pad > 0) put(px, ['nn', 'll', 'nn'].slice(0, pad), x + SPRITE_W, PX_H - 1 - pad, { n: '#fffdf5', l: '#9aa3ad' })
   const beside = x + SPRITE_W + 1
   if (o.stage > 0 && (o.mood === 'happy' || o.mood === 'loved' || o.mood === 'party')) put(px, ['H.H', 'HHH', '.H.'], beside, 0, { H: HEART })
   if (o.stage > 0 && o.mood === 'sleeping' && beside < W) chars[0]![beside] = { ch: beat % 2 === 0 ? 'z' : 'Z', color: DIM }

@@ -6,9 +6,9 @@ import { layoutOf } from './layout'
 import { openSession } from './lifecycle'
 import { DEFAULT_SETTINGS, parseSwitch, statsText } from './stats'
 import { SETTLE_MS, choosePlay, decay, finishTurn, moodOf, newLive, newPet, newStroll, settlePath, stageOf, stepStroll, strollAt, tallyUp, toolKind, welcomeBack, withTraits } from './pet'
-import { bandSvg } from './svg'
-import { isSameView, sceneOf, viewOf } from './view'
-import { kindOf, weatherJoy } from './weather'
+import { bandSvg, scatter } from './svg'
+import { TRANS_MS, isSameView, sceneOf, viewOf } from './view'
+import { glowOf, intensityOf, kindOf, localToEpoch, weatherJoy } from './weather'
 import { countDay, dayKey, daysToNext, holidayOf, isBalloonDay, isGoldenOn, seasonOf, stageFor, worldOf } from './world'
 
 const calm = (over: Partial<Pet> = {}): Pet => ({ ...newPet(0, () => 0), trait: 'calm', hue: 0, ...over })
@@ -120,6 +120,9 @@ test('the picture is exactly as wide as the band on each surface, so nothing sca
   const narrow = layoutOf('desktop', 40, true)
   expect(narrow.kind === 'scene' && !narrow.hasCaption).toBe(true)
   expect(layoutOf('terminal', 120, false).kind).toBe('text')
+  // The desktop band spans the viewport: 123 columns measured as a 943 px slot.
+  expect(layoutOf('desktop', 110, true, 0, 123)).toEqual({ kind: 'scene', width: 939, hasCaption: true })
+  expect(layoutOf('vscode', 43, true, 0, 50)).toEqual(layoutOf('vscode', 43, true))
   expect(layoutOf('desktop', 121, true, 935)).toEqual(layoutOf('desktop', 120, true))
   expect(layoutOf('desktop', 119, true, 935).kind === 'scene' && (layoutOf('desktop', 119, true, 935) as { width: number }).width <= 119 * 7.83).toBe(true)
 })
@@ -291,5 +294,63 @@ test('golden lasts the day it is earned, until local midnight', async () => {
   expect(sceneOf(p, newLive(0), newStroll(0), null, noon).golden).toBe(true)
   expect(sceneOf(p, newLive(0), newStroll(0), null, noon + 86_400_000).golden).toBe(false)
   expect(statsText(p, null, null, [], DEFAULT_SETTINGS, noon).includes('golden today')).toBe(true)
-  expect(statsText({ ...p, streak: 7 }, null, null, [], DEFAULT_SETTINGS, noon).includes('clean streak: 7 / 25')).toBe(true)
+  expect(statsText({ ...p, streak: 7 }, null, null, [], DEFAULT_SETTINGS, noon).includes('clean streak: 7 / 60 working turns')).toBe(true)
+})
+
+test('rain and snow scatter the same way on every draw, spread over the whole band at any width', async () => {
+  expect(scatter(7)).toBe(scatter(7))
+  const values = Array.from({ length: 400 }, (_, i) => scatter(i))
+  expect(values.every(v => v >= 0 && v < 1)).toBe(true)
+  const bins = Array.from({ length: 10 }, (_, b) => values.filter(v => v >= b / 10 && v < (b + 1) / 10).length)
+  expect(Math.min(...bins) >= 20 && Math.max(...bins) <= 60).toBe(true)
+  for (const width of [857, 939, 1000, 1200]) {
+    const svg = bandSvg(sceneOf(calm({ xp: 500 }), newLive(0), newStroll(0), rainy, 0), width, 1)
+    expect(svg).toBe(bandSvg(sceneOf(calm({ xp: 500 }), newLive(0), newStroll(0), rainy, 0), width, 1))
+    expect(svg.includes('NaN')).toBe(false)
+  }
+})
+
+test('rain and snow fall lighter or heavier by their code; the sky warms around sunrise and sunset', async () => {
+  expect([intensityOf(61), intensityOf(63), intensityOf(65), intensityOf(80), intensityOf(82), intensityOf(73)]).toEqual([1, 2, 3, 1, 3, 2])
+  const drops = (intensity: 1 | 2 | 3) => (bandSvg(sceneOf(calm({ xp: 500 }), newLive(0), newStroll(0), { ...rainy, intensity }, 0), 900, 1).match(/<line /g) ?? []).length
+  expect(drops(1) < drops(2) && drops(2) < drops(3)).toBe(true)
+  expect(localToEpoch('2026-10-23T07:31', 3 * 3600)).toBe(Date.UTC(2026, 9, 23, 4, 31))
+  const w = { ...rainy, sunrise: 10_000_000, sunset: 50_000_000 }
+  expect([glowOf(w, 10_000_000 - 60_000), glowOf(w, 50_000_000 + 20 * 60_000), glowOf(w, 30_000_000)]).toEqual(['dawn', 'dusk', null])
+  const dusk = bandSvg(sceneOf(calm({ xp: 500 }), newLive(0), newStroll(0), { ...w, kind: 'clear' }, 50_000_000), 900, 1)
+  expect(dusk.includes('#ff9f7a')).toBe(true)
+})
+
+test('in a terminal every kind and strength of rain or snow shows some, every second', async () => {
+  for (const kind of ['drizzle', 'rain', 'storm', 'snow'] as const) {
+    for (const intensity of [1, 2, 3] as const) {
+      for (let beat = 0; beat < 15; beat++) {
+        const rows = asciiBand(sceneOf(calm({ xp: 500 }), newLive(0), newStroll(0), { ...rainy, kind, intensity }, 0), 100, beat * 1000)!
+        const sky = rows.slice(0, 2).map(r => r.map(x => x.text).join('')).join('')
+        expect(/[╵·*]/.test(sky)).toBe(true)
+      }
+    }
+  }
+})
+
+test('while you type it listens: down at a short draft, notes on a long one, and the move plays once', async () => {
+  const at = 1_000_000
+  const looking = { ...newLive(0), listen: 'look' as const, trans: { from: 'idle' as const, at } }
+  const noting = { ...newLive(0), listen: 'notes' as const, trans: { from: 'listening' as const, at } }
+  expect(moodOf(calm(), looking, at)).toBe('listening')
+  expect(moodOf(calm(), noting, at)).toBe('noting')
+  expect(moodOf(calm(), { ...noting, activity: 'thinking' }, at)).toBe('thinking')
+  const p = calm({ xp: 500 })
+  const fresh = sceneOf(p, noting, newStroll(0), null, at + 100)
+  expect(fresh.trans).toEqual({ from: 'listening', at })
+  expect(sceneOf(p, noting, newStroll(0), null, at + TRANS_MS + 1).trans).toBe(null)
+  // The fading of the move alone never redraws the band.
+  expect(isSameView(viewOf(p, false, noting, newStroll(0), null, at + 100), viewOf(p, false, noting, newStroll(0), null, at + TRANS_MS + 1))).toBe(true)
+  const svg = bandSvg(fresh, 800, 1)
+  expect(svg.includes('note-in')).toBe(true)
+  expect(bandSvg({ ...fresh, mood: 'thinking', trans: { from: 'noting', at } }, 800, 1).includes('note-out')).toBe(true)
+  expect(bandSvg({ ...fresh, mood: 'listening', trans: { from: 'idle', at } }, 800, 1).includes('pupil-move')).toBe(true)
+  // In a terminal the notepad comes up a row a frame, and every row stays exactly as wide as asked.
+  const rows = (now: number) => asciiBand(fresh, 60, now)!.map(r => r.map(x => x.text).join(''))
+  for (const now of [at, at + 250, at + 500, at + 2000]) for (const r of rows(now)) expect([...r].length).toBe(60)
 })

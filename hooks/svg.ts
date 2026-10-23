@@ -1,4 +1,4 @@
-import type { BandScene, Mood, Path, Play, Trait, Weather, WeatherKind, WorldScene } from '../types'
+import type { BandScene, Mood, Path, Play, Trait, Transition, Weather, WeatherKind, WorldScene } from '../types'
 
 export const BODY = ['#f3e6c8', '#9fd8ff', '#8be0a4', '#ffd27a', '#ff9f80', '#c7a0ff']
 const SCALE = [1, 0.72, 0.82, 0.92, 1, 1.06]
@@ -68,9 +68,21 @@ const STYLE = `
   @keyframes shrink { 0% { transform: scale(1); } 90% { transform: scale(.2); opacity: 1; } 100% { transform: scale(.2); opacity: 0; } }
   @keyframes twinkle { 0%,100% { transform: scale(.4); opacity: .3; } 50% { transform: scale(1); opacity: 1; } }
   @keyframes confetti { 0% { transform: translateY(-20px) rotate(0); } 100% { transform: translateY(210px) rotate(540deg); } }
+  .pupil-move { animation: pupil-move .45s ease-out both; }
+  .note-in { animation: note-in .45s ease-out both; }
+  .note-out { animation: note-out .45s ease-in both; }
+  .pop { transform-box: fill-box; transform-origin: 20% 100%; animation: pop .35s ease-out both; }
+  @keyframes note-in { from { transform: translateY(30px); opacity: 0; } }
+  @keyframes note-out { to { transform: translateY(30px); opacity: 0; } }
+  @keyframes pop { from { transform: scale(.3); opacity: 0; } }
 `
 
-const eyes = (mood: Mood, trait: Trait, skin: string) => {
+/** Where the pupils look, up or down from the middle. */
+const LISTENS: readonly Mood[] = ['listening', 'noting']
+const lookOf = (mood: Mood) => (mood === 'thinking' ? -4 : mood === 'hungry' ? 2 : LISTENS.includes(mood) ? 5 : 0)
+const hasPupils = (mood: Mood) => !['sleeping', 'happy', 'party', 'loved', 'sad'].includes(mood)
+
+const eyes = (mood: Mood, trait: Trait, skin: string, from: Mood | null = null) => {
   if (mood === 'sleeping') {
     return `<path class="stroke" d="M-26 -8 Q-18 -2 -10 -8 M10 -8 Q18 -2 26 -8"/>`
   }
@@ -82,15 +94,17 @@ const eyes = (mood: Mood, trait: Trait, skin: string) => {
       <circle class="ink" cx="-18" cy="-3" r="4"/><circle class="ink" cx="18" cy="-3" r="4"/></g>
       <path class="stroke" d="M-28 -14 L-13 -19 M28 -14 L13 -19"/>`
   }
-  const look = mood === 'thinking' ? -4 : mood === 'hungry' ? 2 : 0
+  const look = lookOf(mood)
+  // Coming from another pose, the pupils glide from where they were, once.
+  const dy = from !== null && hasPupils(from) ? lookOf(from) - look : 0
   const lookX = 0
   const glance = trait === 'curious' && (mood === 'idle' || mood === 'thinking') ? 'glance' : ''
   const lids = trait === 'sleepy'
     ? `<path d="M-27.5 -12 Q-18 -22 -8.5 -12 Q-18 -6.5 -27.5 -12 Z M8.5 -12 Q18 -22 27.5 -12 Q18 -6.5 8.5 -12 Z" fill="${skin}" stroke="#2b2f36" stroke-width="1.6"/>`
     : ''
   return `<g class="eyes"><ellipse cx="-18" cy="-8" rx="9" ry="11" fill="#fff"/><ellipse cx="18" cy="-8" rx="9" ry="11" fill="#fff"/>
-    <g class="${glance}"><circle class="ink" cx="${-18 + lookX}" cy="${-7 + look}" r="5"/><circle class="ink" cx="${18 + lookX}" cy="${-7 + look}" r="5"/>
-    <circle cx="${-16 + lookX}" cy="${-10 + look}" r="1.6" fill="#fff"/><circle cx="${20 + lookX}" cy="${-10 + look}" r="1.6" fill="#fff"/></g>${lids}</g>`
+    ${dy === 0 ? '' : `<style>@keyframes pupil-move { from { transform: translateY(${dy}px); } }</style><g class="pupil-move">`}<g class="${glance}"><circle class="ink" cx="${-18 + lookX}" cy="${-7 + look}" r="5"/><circle class="ink" cx="${18 + lookX}" cy="${-7 + look}" r="5"/>
+    <circle cx="${-16 + lookX}" cy="${-10 + look}" r="1.6" fill="#fff"/><circle cx="${20 + lookX}" cy="${-10 + look}" r="1.6" fill="#fff"/></g>${dy === 0 ? '' : '</g>'}${lids}</g>`
 }
 
 const mouth = (mood: Mood) => {
@@ -143,7 +157,15 @@ const calling = (stage: number, look: Look) => {
   return stage >= 3 && job !== null ? PATH_GEAR[job] : ''
 }
 
-const creature = (stage: number, mood: Mood, golden: boolean, look: Look) => {
+/** A notepad and pencil held low on the right, while the pet takes notes on a long draft. */
+const NOTEPAD = `<g transform="translate(30 30) rotate(-12)"><rect x="-14" y="-12" width="28" height="30" rx="3" fill="#fffdf5" stroke="#2b2f36" stroke-width="2.5"/><path d="M-8 -3 h16 M-8 4 h16 M-8 11 h10" stroke="#9aa3ad" stroke-width="2"/></g><g transform="translate(52 26) rotate(30)"><rect x="-3" y="-18" width="6" height="26" fill="#ffc83d" stroke="#2b2f36" stroke-width="2"/><path d="M-3 8 L0 15 L3 8 Z" fill="#2b2f36"/></g>`
+
+const notepad = (mood: Mood, from: Mood | null) => {
+  if (mood === 'noting') return from === null || from === 'noting' ? NOTEPAD : `<g class="note-in">${NOTEPAD}</g>`
+  return from === 'noting' ? `<g class="note-out">${NOTEPAD}</g>` : ''
+}
+
+const creature = (stage: number, mood: Mood, golden: boolean, look: Look, from: Mood | null = null) => {
   const skin = look.skin ?? tint(BODY[stage]!, look.hue)
   const fill = golden ? 'url(#gold)' : skin
   return `
@@ -155,9 +177,10 @@ const creature = (stage: number, mood: Mood, golden: boolean, look: Look) => {
     ${accessories(stage)}
     <circle cx="-34" cy="8" r="6" fill="#ff8fa3" opacity=".55"/>
     <circle cx="34" cy="8" r="6" fill="#ff8fa3" opacity=".55"/>
-    ${eyes(look.play === 'stars' ? 'thinking' : mood, look.trait, golden ? '#ffd54a' : skin)}
+    ${eyes(look.play === 'stars' ? 'thinking' : mood, look.trait, golden ? '#ffd54a' : skin, from)}
     ${look.play === 'yawn' ? '<ellipse class="pulse" cx="0" cy="18" rx="7" ry="9" fill="#7a2f3a"/>' : mouth(mood)}
     ${calling(stage, look)}
+    ${notepad(mood, from)}
 `
 }
 
@@ -257,14 +280,15 @@ const PLAIN: Look = { hue: 0, trait: 'calm' }
 /** Where the feet stand in the pet's own box: smaller stages scale toward it, so no stage floats. */
 const FEET = 184
 
-const scene = (stage: number, mood: Mood, golden: boolean, xp: number, look: Look = PLAIN) => {
+const scene = (stage: number, mood: Mood, golden: boolean, xp: number, look: Look = PLAIN, trans: Transition | null = null) => {
+  const from = trans === null ? null : trans.from
   const motion = mood === 'sleeping' ? 'slow' : mood === 'party' || look.play === 'puddle' ? 'jump'
     : look.play === 'stretch' ? 'stretch' : `t-${look.trait}`
-  const body = stage === 0 ? egg(mood, xp) : creature(stage, mood, golden, look)
+  const body = stage === 0 ? egg(mood, xp) : creature(stage, mood, golden, look, from)
   return `<ellipse cx="120" cy="182" rx="${46 * SCALE[stage]!}" ry="7" fill="#000" opacity=".12"/>
   <g class="${motion}"><g transform="translate(120 ${stage === 0 ? 124 : FEET - 52 * SCALE[stage]!}) scale(${SCALE[stage]})"><g class="bob">${body}</g></g></g>
   ${golden ? sparkles() : ''}
-  ${overlay(mood)}
+  ${mood === 'thinking' && from !== null ? `<g class="pop">${overlay(mood)}</g>` : overlay(mood)}
   ${look.play ? playScene(look.play) : ''}`
 }
 
@@ -461,6 +485,20 @@ const worldSvg = (o: WorldScene, width: number, w: Weather) => {
   return out
 }
 
+/**
+ * A number in [0, 1) that looks random but is the same for the same `n` on every draw, so drops scatter
+ * without lining up at any band width and the picture's source stays the same between redraws.
+ */
+export const scatter = (n: number) => {
+  let t = (n + 0x6d2b79f5) | 0
+  t = Math.imul(t ^ (t >>> 15), t | 1)
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+}
+
+/** How many drops or flakes, by how hard it falls: light rain is sparse, heavy rain dense. */
+const DENSITY = { 1: 0.55, 2: 1, 3: 1.6 } as const
+
 /** Rain, snow, fog and lightning: everything in front of the pet. */
 const foreground = (width: number, w: Weather, nowMs: number) => {
   let out = ''
@@ -469,19 +507,19 @@ const foreground = (width: number, w: Weather, nowMs: number) => {
   const sheet = (drops: string, periodS: number) =>
     `<g class="sheet" style="animation-duration:${periodS}s;animation-delay:${phaseAt(nowMs, periodS).toFixed(2)}s">${drops}<g transform="translate(0 ${-BAND_H})">${drops}</g></g>`
   if (w.kind === 'rain' || w.kind === 'drizzle' || w.kind === 'storm') {
-    const n = Math.round(width / (w.kind === 'drizzle' ? 22 : 11))
+    const n = Math.round((width / (w.kind === 'drizzle' ? 22 : 11)) * DENSITY[w.intensity ?? 2])
     const len = w.kind === 'drizzle' ? 5 : 9
     const drops = Array.from({ length: n }, (_, i) => {
-      const x = (i * 53) % width
-      const y = (i * 29) % BAND_H
-      return `<line x1="${x}" y1="${y}" x2="${x - 2}" y2="${y + len}" stroke="#4f78a8" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>`
+      const x = Math.round(scatter(i * 2 + 1) * width * 10) / 10
+      const y = Math.round(scatter(i * 2 + 2) * BAND_H * 10) / 10
+      return `<line x1="${x}" y1="${y}" x2="${(x - 2).toFixed(1)}" y2="${(y + len).toFixed(1)}" stroke="#4f78a8" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>`
     }).join('')
     out += sheet(drops, 0.8)
   }
   if (w.kind === 'snow') {
-    const flakes = Array.from({ length: Math.round(width / 16) }, (_, i) => {
-      const x = (i * 41) % width
-      const y = (i * 23) % BAND_H
+    const flakes = Array.from({ length: Math.round((width / 16) * DENSITY[w.intensity ?? 2]) }, (_, i) => {
+      const x = (scatter(i * 2 + 101) * width).toFixed(1)
+      const y = (scatter(i * 2 + 102) * BAND_H).toFixed(1)
       return `<circle cx="${x}" cy="${y}" r="${1.5 + (i % 3) * 0.6}" fill="#fff"/>`
     }).join('')
     out += `<g class="hover" style="animation-duration:3s">${sheet(flakes, 6)}</g>`
@@ -546,7 +584,10 @@ const fallbackWeather = (nowMs: number): Weather => {
  */
 export const bandSvg = (o: BandScene, width: number, anchor: number) => {
   const w = o.weather ?? fallbackWeather(anchor)
-  const [top, bottom] = (w.isDay ? SKY_DAY : SKY_NIGHT)[w.kind]
+  const [top, plainBottom] = (w.isDay ? SKY_DAY : SKY_NIGHT)[w.kind]
+  // Around sunrise and sunset the sky warms at the horizon; softer under rain or cloud.
+  const isOpen = w.kind === 'clear' || w.kind === 'partly'
+  const bottom = w.glow === 'dawn' ? (isOpen ? '#ffcfa3' : '#e3c2ae') : w.glow === 'dusk' ? (isOpen ? '#ff9f7a' : '#d9ab9a') : plainBottom
   const petW = 240 * BAND_SCALE
   const range = Math.max(0, width - 2 * WALL - petW)
   const px = (f: number) => (WALL + f * range).toFixed(1)
@@ -580,7 +621,7 @@ export const bandSvg = (o: BandScene, width: number, anchor: number) => {
     ${backdrop(width, w, anchor, o.world?.season ?? null)}
     ${o.world === null ? '' : worldSvg(o.world, width, w)}
     <g ${place}><g ${turn}>
-      <g transform="translate(0 ${BAND_H - 200 * BAND_SCALE - 1}) scale(${BAND_SCALE})">${scene(o.stage, o.mood, o.golden, o.eggXp, o.look)}${gear(o.stage, w)}</g>
+      <g transform="translate(0 ${BAND_H - 200 * BAND_SCALE - 1}) scale(${BAND_SCALE})">${scene(o.stage, o.mood, o.golden, o.eggXp, o.look, o.trans)}${gear(o.stage, w)}</g>
     </g></g>
     ${foreground(width, w, anchor)}
     ${label(width, o.caption, w.isDay)}
@@ -605,5 +646,5 @@ export const portraitSvg = (o: BandScene) => `<svg xmlns="http://www.w3.org/2000
   ${DEFS}
   <circle cx="120" cy="112" r="86" fill="#e9eef5"/>
   <ellipse cx="120" cy="186" rx="70" ry="8" fill="#000" opacity=".06"/>
-  ${scene(o.stage, o.mood, o.golden, o.eggXp, o.look)}
+  ${scene(o.stage, o.mood, o.golden, o.eggXp, o.look, o.trans)}
 </svg>`

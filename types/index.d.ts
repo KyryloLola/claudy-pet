@@ -1,4 +1,7 @@
-export type Mood = 'idle' | 'thinking' | 'sleeping' | 'sad' | 'hungry' | 'eating' | 'happy' | 'party' | 'loved'
+export type Mood = 'idle' | 'thinking' | 'sleeping' | 'sad' | 'hungry' | 'eating' | 'happy' | 'party' | 'loved' | 'listening' | 'noting'
+
+/** A change of pose that plays once: the mood the pet comes from, and when. */
+export type Transition = { from: Mood; at: number }
 
 /** A temperament the pet hatches with and keeps for life. */
 export type Trait = 'calm' | 'energetic' | 'curious' | 'sleepy'
@@ -14,7 +17,22 @@ export type Tally = { shell: number; edit: number; explore: number }
 export type WeatherKind = 'clear' | 'partly' | 'cloudy' | 'fog' | 'drizzle' | 'rain' | 'snow' | 'storm'
 
 /** Current weather where the person roughly is, from their IP. */
-export type Weather = { kind: WeatherKind; temp: number; isDay: boolean; wind: number; city: string; at: number; lat?: number }
+export type Weather = {
+  kind: WeatherKind
+  temp: number
+  isDay: boolean
+  wind: number
+  city: string
+  at: number
+  lat?: number
+  /** How hard it rains or snows: 1 light, 2 moderate, 3 heavy. */
+  intensity?: 1 | 2 | 3
+  /** Today's sunrise and sunset, epoch ms. */
+  sunrise?: number
+  sunset?: number
+  /** Derived in the scene: the half hour around sunrise or sunset. */
+  glow?: 'dawn' | 'dusk' | null
+}
 
 /**
  * GLOBAL, in the plugin store, shared by every session and surface:
@@ -61,7 +79,10 @@ export type Live = {
   lastActive: number
   sessionTurns: number
   sessionErrors: number
-  isTyping: boolean
+  /** While you type: a short draft and it looks down at it, a long one and it takes notes. */
+  listen?: 'look' | 'notes' | null
+  /** The last change of pose around typing and sending, for the one-off move between poses. */
+  trans?: Transition | null
   shownAt: number
   play: Play | null
   playUntil: number
@@ -94,12 +115,14 @@ export type BandScene = {
   caption: string[]
   stride: { from: number; to: number; startedAt: number; durMs: number; facing: 1 | -1 }
   world: WorldScene | null
+  /** A pose change in the last moment, so the picture can play the move once. */
+  trans: Transition | null
 }
 
 /** GLOBAL settings, in the plugin store: what the band shows and how lively the pet is. */
 export type PetSettings = { caption: boolean; weather: boolean; plays: boolean; longing: boolean; world: boolean; seasons: boolean }
 
-export type BandView = { isHidden: boolean; isTyping: boolean; shownAt: number; name: string; scene: BandScene }
+export type BandView = { isHidden: boolean; shownAt: number; name: string; scene: BandScene }
 
 declare module 'claude-code' {
   interface PluginState {

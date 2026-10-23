@@ -30,9 +30,9 @@ The CLI gets its own pixel-art band: three rows of half blocks, two pixels to a 
 - **Grows** through six stages, Egg → Baby → Kid → Teen → Adult → Legend, from the turns and tools it watches and, slowly, with the calendar: Legend takes a year together.
 - **Has a temperament** picked at hatching (calm, energetic, curious, sleepy) that changes how it walks, naps and reacts.
 - **Takes a calling** at Teen from the work it saw most: engineer (shell), writer (edits) or explorer (reading and searching).
-- **Lives with you**: your prompts feed it, a turn with no tool errors makes it happy, it thinks while Claude thinks, naps when you are away, and only now and then shows that it is hungry or sad.
+- **Lives with you**: it listens while you type (a long draft gets the notepad out), your prompts feed it, a turn with no tool errors makes it happy, it thinks while Claude thinks, naps when you are away, and only now and then shows that it is hungry or sad.
 - **Plays** on its own every few minutes, picking something that fits the weather and the hour: chasing a butterfly, jumping in puddles, rolling a snowball, watching stars.
-- **Has golden days**: 25 clean turns in a row, counted across sessions, make it golden until midnight. A turn with a tool error starts the count again.
+- **Has golden days**: 60 clean working turns in a row, counted across sessions, make it golden until midnight. A working turn is one where Claude used a tool; a turn with a tool error starts the count again, and a turn of plain talk neither counts nor breaks it.
 
 ## A year together
 
@@ -77,7 +77,7 @@ Claudy Pet is written to be easy to audit. Everything it does outside its own co
 
 **What it reads**
 
-- **Your prompt box**, only to tell whether you are typing (so the band can step aside). It looks at whether the text is empty; the text is never stored or sent.
+- **Your prompt box**, only to tell whether you are typing and roughly how much: its length and its number of lines. The pet looks down at a short draft and takes notes on a long one. The text itself is never stored or sent.
 - **Each submitted prompt and each tool call**, only to count them: a prompt feeds the pet, and a tool call adds to its tally of shell, edit and explore work. It reads the tool's name and whether it failed; never its input or output.
 - **Each finished turn**: whether it ended normally and its output token count, which turn into experience.
 - **The date and time on your computer**, for the pet's age, the days you worked together, the season and holidays.
@@ -88,7 +88,7 @@ Claudy Pet is written to be easy to audit. Everything it does outside its own co
 Only when the weather setting is on (it is by default):
 
 - `GET https://ipwho.is/` — returns the city and rough coordinates for your IP address. Like any web request, it reveals your IP address to ipwho.is. The answer is cached and the call made at most twice a day.
-- `GET https://api.open-meteo.com/v1/forecast?latitude=…&longitude=…&current=…` — the current weather at those coordinates, rounded to two decimals (about a kilometre). Every 20 minutes.
+- `GET https://api.open-meteo.com/v1/forecast?latitude=…&longitude=…&current=…&daily=sunrise,sunset&timezone=auto` — the current weather at those coordinates, rounded to two decimals (about a kilometre), and today's sunrise and sunset for a warmer sky around them. Every 20 minutes.
 
 Nothing about your prompts, tool calls, files, code or conversation is ever sent anywhere. `/pet-weather off` stops both requests.
 
@@ -97,11 +97,11 @@ Nothing about your prompts, tool calls, files, code or conversation is ever sent
 | Hook | What it does |
 | --- | --- |
 | `session.start`, `session.end` | Brings the pet back from its store, starts its timers; saves the pet when the session ends |
-| `prompt.edit` | Checks only whether the prompt box is empty, to hide the band while you type |
+| `prompt.edit` | Reads only the draft's length and number of lines, to pick the pet's listening pose; never changes the draft |
 | `prompt.submit` | Counts the prompt as food; the text is not read beyond that |
 | `tool.call` | Counts the tool by name and notes whether it failed; never changes, blocks or answers a call |
 | `turn.complete` | Turns the finished turn and its output token count into experience |
-| `command.run` | Answers only its own commands, each matched by its exact name (`pet-stats`, `pet-feed`, `pet-pat`, `pet-show`, `pet-hide`, `pet-hatch`, `pet-name`, `pet-caption`, `pet-weather`, `pet-plays`); it never sees, changes or runs any other command |
+| `command.run` | Answers only its own commands, each matched by its exact name (`pet-stats`, `pet-feed`, `pet-pat`, `pet-show`, `pet-hide`, `pet-hatch`, `pet-name`, `pet-caption`, `pet-weather`, `pet-plays`, `pet-longing`, `pet-world`, `pet-seasons`); it never sees, changes or runs any other command |
 | `ui.render` | Draws the band above the prompt and the `/pet-stats` pane |
 
 **What it runs**
